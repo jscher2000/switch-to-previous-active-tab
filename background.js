@@ -1,98 +1,224 @@
 /* 
   Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
-  Uses lots of code from "Active Tab History" 0.2 (2017-11-10)
-  https://addons.mozilla.org/firefox/addon/active-tab-history/
+  Revision 0.3
 */
 
-// Data Structure (simplified)
-let tabdata = {
-  _data: {},
-  init: function(winid, tabid) {
-	let item = {active:tabid, last:null, earlier:null};
-	this._data[winid] = item;
-  },
-  get: function(winid, tabid) {
-	if (!(winid in this._data))
-	  this.init(winid, tabid);
-	return this._data[winid];
-  },
-};
+/**** Create and populate data structure ****/
 
-// Populate tabdata object with active tabs in open windows
-browser.tabs.query({active:true}).then((foundtabs) => {
-	for (let atab of foundtabs)
-		tabdata.init(atab.windowId, atab.id);
-});
+var oTabs = {};
 
-// Listen for tab activation and update tabdata
-browser.tabs.onActivated.addListener((info) => {
-	let h = tabdata.get(info.windowId, info.tabId);
-	//console.log('Before tab activation update: '+JSON.stringify(h));
-	if (info.tabId === h.active)
-		return;
-	h.earlier = h.last;
-	h.last = h.active;
-	h.active = info.tabId;
-	//console.log('After tab activation update: '+JSON.stringify(h));
-	
-	// Set icon image and tooltip based on ability to switch
-	setButton(info.windowId, info.tabId);
-});
+// TODO make this user configurable
+var maxTabs = 5;
 
-// Listen for tab removal and purge from tabdata
-browser.tabs.onRemoved.addListener((id, info) => {
-	let h = tabdata.get(info.windowId, id);
-	//console.log('Before tab removal update: '+JSON.stringify(h));	
-	if (h.active == id){
-		h.active = h.last; // Firefox may change this by activating a different tab on close
-		h.last = h.earlier;
-		h.earlier = null;
-	} else {
-		if (h.last == id){
-			if (h.earlier != h.active) {
-				h.last = h.earlier;
+// Initialize oTabs object with up to maxTabs recent tabs per window
+browser.tabs.query({}).then((arrAllTabs) => {
+	// Sort array of tab objects in descending order by lastAccessed (numeric)
+	arrAllTabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
+	// Store tabIds to oTabs
+	var i, arrWTabs;
+	for (i=0; i<arrAllTabs.length; i++){
+		// Add to global list for i=0 through maxTabs-1 (order among windows is unpredictable)
+		if (i < maxTabs) {
+			if (!('global' in oTabs)) {
+				oTabs['global'] = [arrAllTabs[i].id];
 			} else {
-				h.last = null;
+				arrWTabs = oTabs['global'];
+				arrWTabs.push(arrAllTabs[i].id);
+				oTabs['global'] = arrWTabs;
 			}
-			h.earlier = null;
 		}
-		if (h.earlier == id) h.earlier = null;
+		// Add to window-specific lists
+		if (!(arrAllTabs[i].windowId in oTabs)) {
+			oTabs[arrAllTabs[i].windowId] = [arrAllTabs[i].id];
+		} else {
+			arrWTabs = oTabs[arrAllTabs[i].windowId];
+			if (arrWTabs.length < maxTabs) {
+				arrWTabs.push(arrAllTabs[i].id);
+				oTabs[arrAllTabs[i].windowId] = arrWTabs;
+			}
+		}
 	}
-	//console.log('After tab removal update: '+JSON.stringify(h));
+	//console.log('initialized => '+JSON.stringify(oTabs));
+}).then(function(){
+	// make current window's active tab the first in the global array if it isn't already
+	browser.tabs.query({windowId: browser.windows.WINDOW_ID_CURRENT, active: true}).then((arrQTabs) => {
+		if (arrQTabs.length < 1) console.log('Error getting active tab in current window');
+		else {
+			var arrWTabs = oTabs['global'];
+			// Handle case of tabId in the existing list
+			var pos = arrWTabs.indexOf(arrQTabs[0].id);
+			if (pos > 0) { 
+				// remove from its old position
+				arrWTabs.splice(pos, 1);
+				// add to front
+				arrWTabs.unshift(arrQTabs[0].id);
+				// don't check length because we didn't change it
+				// store change
+				oTabs['global'] = arrWTabs;
+			} else if (pos == -1) {
+				// not in list, add to front
+				arrWTabs.unshift(arrQTabs[0].id);
+				// check length and trim off the last if too long
+				if (arrWTabs.length > maxTabs) arrWTabs.pop();
+				// store change
+				oTabs['global'] = arrWTabs;
+			} else {
+				// this tab already is top-of-list so no action
+			}
+			//console.log('global-update => '+JSON.stringify(oTabs));
 
-	// Set icon image and tooltip based on ability to switch
-	setButton(info.windowId, id);
+			// Update toolbar button
+			setButton(arrQTabs[0].windowId);
+		}
+	})
 });
 
-// Set icon image and tooltip based on ability to switch
-function setButton(wid, tid){
-	let h = tabdata.get(wid, tid);
-	if (h.last != null) {
-		browser.browserAction.setIcon({path: 'icons/lasttab.png'});
-		browser.browserAction.setTitle({title: 'Switch to previous tab'}); 
-	} else {
-		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
-		browser.browserAction.setTitle({title: 'Previous tab not available'}); 
-	}
-}
 
-// Fix toolbar button for current (newly focused) window
+/**** Set up tab and window listeners to keep the data fresh ****/
+
+// Listen for tab activation and update oTabs
+browser.tabs.onActivated.addListener((info) => {
+	// Update global tabIds array
+	var arrWTabs = oTabs['global'];
+	//   Handle case of tabId in the existing list
+	var pos = arrWTabs.indexOf(info.tabId);
+	if (pos > 0) { 
+		// remove from its old position
+		arrWTabs.splice(pos, 1);
+		// add to front
+		arrWTabs.unshift(info.tabId);
+		// don't check length because we didn't change it
+		// store change
+		oTabs['global'] = arrWTabs;
+	} else if (pos == -1) {
+		// not in list, add to front
+		arrWTabs.unshift(info.tabId);
+		// check length and trim off the last if too long
+		if (arrWTabs.length > maxTabs) arrWTabs.pop();
+		// store change
+		oTabs['global'] = arrWTabs;
+	} else {
+		// active tab already is top-of-list so no action
+	}
+	// Update window-specific tabIds array
+	var arrWTabs = oTabs[info.windowId];
+	//   Handle case of new window
+	if (!arrWTabs) {
+		oTabs[info.windowId] = [info.tabId];
+		arrWTabs = oTabs[info.windowId];
+	}
+	//   Handle case of tabId in the existing list
+	var pos = arrWTabs.indexOf(info.tabId);
+	if (pos > 0) { 
+		// remove from its old position
+		arrWTabs.splice(pos, 1);
+		// add to front
+		arrWTabs.unshift(info.tabId);
+		// don't check length because we didn't change it
+		// store change
+		oTabs[info.windowId] = arrWTabs;
+	} else if (pos == -1) {
+		// not in list, add to front
+		arrWTabs.unshift(info.tabId);
+		// check length and trim off the last if too long
+		if (arrWTabs.length > maxTabs) arrWTabs.pop();
+		// store change
+		oTabs[info.windowId] = arrWTabs;
+	} else {
+		// active tab already is top-of-list so no action
+	}
+	//console.log('onActivated => '+JSON.stringify(oTabs));
+
+	// Update toolbar button
+	setButton(info.windowId);
+});
+
+// Listen for tab removal and purge from oTabs
+browser.tabs.onRemoved.addListener((id, info) => {
+	// Update global tabIds array
+	var arrWTabs = oTabs['global'];
+	//   Handle case of tabId in the existing list
+	var pos = arrWTabs.indexOf(id);
+	if (pos > -1) { 
+		// remove from its old position
+		arrWTabs.splice(pos, 1);
+		// store change
+		oTabs['global'] = arrWTabs;
+	}
+	// Update window-specific tabIds array
+	var arrWTabs = oTabs[info.windowId];
+	//   Handle case of tabId in the existing list
+	var pos = arrWTabs.indexOf(id);
+	if (pos > -1) { 
+		// remove from its old position
+		arrWTabs.splice(pos, 1);
+		// store change
+		oTabs[info.windowId] = arrWTabs;
+		// TODO we can remove the object if this removal closes the window
+	}
+	//console.log('onRemoved => '+JSON.stringify(oTabs));
+
+	// Update toolbar button
+	setButton(info.windowId);
+});
+
+// Updates globals and fix toolbar button for current (newly focused) window
 browser.windows.onFocusChanged.addListener((wid) => {
 	browser.tabs.query({active:true, windowId: wid}).then((foundtabs) => {
-		setButton(wid, foundtabs[0].id);
+		if (foundtabs.length < 1) return; // some weird window?
+		// Update toolbar button
+		setButton(wid);
+		// Update globals
+		var arrWTabs = oTabs['global'];
+		// Handle case of tabId in the existing list
+		var pos = arrWTabs.indexOf(foundtabs[0].id);
+		if (pos > 0) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// add to front
+			arrWTabs.unshift(foundtabs[0].id);
+			// don't check length because we didn't change it
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else if (pos == -1) {
+			// not in list, add to front
+			arrWTabs.unshift(foundtabs[0].id);
+			// check length and trim off the last if too long
+			if (arrWTabs.length > maxTabs) arrWTabs.pop();
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else {
+			// this tab already is top-of-list so no action
+		}
+		//console.log('window-focused => '+JSON.stringify(oTabs));
 	});
 });
 
 
-// Listen for button click and switch to previous tab
-browser.browserAction.onClicked.addListener((something) => {
-    browser.tabs.query({currentWindow:true, active:true}).then((foundtabs) => {
-		let h = tabdata.get(foundtabs[0].windowId, foundtabs[0].id);
-		if (h.last === null){
-			console.log('NO TAB SWITCH: No previous tabid available for this window');
-		} else {
-			browser.tabs.update(h.last, {active:true});
-		}
-    });
-});
+/**** Set up toolbar button listener and button/tooltip toggler ****/
 
+// Listen for button click and switch to previous tab
+browser.browserAction.onClicked.addListener((currTab) => {
+	// Within window switch
+	var arrWTabs = oTabs[currTab.windowId];
+	if (arrWTabs.length > 1) {
+		browser.tabs.update(arrWTabs[1], {active:true});
+	} else {
+		console.log('NO TAB SWITCH: No previous tabid available for this window');
+	}
+});
+// TODO add context menu or options or other magic to enable both within window and global switching
+// TODO add context menu list (last accessed tab history) -- different permissions
+
+// Set icon image and tooltip based on ability to switch within current window
+function setButton(wid){
+	var arrWTabs = oTabs[wid];
+	if (!arrWTabs) return; // window focused but tab data not available yet
+	if (arrWTabs.length > 1) {
+		browser.browserAction.setIcon({path: 'icons/lasttab.png'});
+		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
+	} else {
+		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'}); 
+	}
+}

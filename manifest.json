@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the previously active tab in the same window.",
-	"version": "0.1",
+	"version": "0.3",
 	"developer": {
 		"name": "Jefferson \"jscher2000\" Scher",
 		"url": "https://github.com/jscher2000/switch-to-previous-active-tab"
