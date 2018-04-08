@@ -2,15 +2,17 @@
   Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
   Revision 0.3 - revise and prepopulate data structure
   Revision 0.4 - add window/global switch, context menu items on toolbar button
+  Revision 0.5 - add recent tabs list (requires tabs permission)
 */
 
 /**** Create and populate data structure ****/
 
 // TODO make this user configurable
 var maxTabs = 5;      // maximum tabIds to store per window
-var maxGlobal = 10;   // maximum tabIds to store across all windows
+var maxGlobal = 15;   // maximum tabIds to store across all windows
 
 var oTabs = {};
+var oRecent = {};
 
 // Initialize oTabs object with up to maxTabs recent tabs per window
 browser.tabs.query({}).then((arrAllTabs) => {
@@ -73,6 +75,12 @@ browser.tabs.query({}).then((arrAllTabs) => {
 			setButton(arrQTabs[0].windowId);
 		}
 	})
+}).then(function(){
+	// Populate oRecent
+	var arrWTabs = oTabs['global'];
+	for (var j=0; j<arrWTabs.length; j++){
+		updateRecent(arrWTabs[j]);
+	}
 });
 
 
@@ -133,6 +141,10 @@ browser.tabs.onActivated.addListener((info) => {
 
 	// Update toolbar button
 	setButton(info.windowId);
+	
+	// Update Recents
+	updateRecent(info.tabId);
+	updateRecentMenu();
 });
 
 // Listen for tab removal and purge from oTabs
@@ -162,6 +174,10 @@ browser.tabs.onRemoved.addListener((id, info) => {
 
 	// Update toolbar button
 	setButton(info.windowId);
+
+	// Update Recents
+	// NO, LEAVE IT: updateRecent(info.tabId);
+	updateRecentMenu();
 });
 
 // Updates globals and fix toolbar button for current (newly focused) window
@@ -193,6 +209,10 @@ browser.windows.onFocusChanged.addListener((wid) => {
 			// this tab already is top-of-list so no action
 		}
 		//console.log('window-focused => '+JSON.stringify(oTabs));
+
+		// Update Recents
+		updateRecent(foundtabs[0].id);
+		updateRecentMenu();
 	});
 });
 
@@ -220,7 +240,6 @@ function doSwitch(oKey, wid){
 		});
 	}
 }
-// TODO add context menu or options or other magic to enable both within window and global switching
 
 // Set icon image and tooltip based on ability to switch within current window
 function setButton(wid){
@@ -252,10 +271,25 @@ browser.menus.create({
 browser.menus.create({
   id: "bamenu_chk_window",
   type: "checkbox",
-  title: "Set Button Action: Same Window",
+  title: "Button Switches Within the Same Window",
   contexts: ["browser_action"],
   checked: blnSameWindow
 });
+
+browser.menus.create({
+  id: "bamenu_recentlist",
+  title: "Recently Active Tabs",
+  contexts: ["browser_action"]
+});
+
+for (var j=0; j<maxGlobal; j++){
+	browser.menus.create({
+		id: "recent"+j,
+		title: "TBD",
+		contexts: ["browser_action"],
+		parentId: "bamenu_recentlist"
+	});
+}
 
 browser.menus.create({
   id: "bamenu_endseparator",
@@ -277,7 +311,64 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 			if (menuInfo.checked) blnSameWindow = true;
 			else blnSameWindow = false;
 			break;
+		case 'bamenu_recentlist':
+			// Refresh/build submenu items?
+			recentMenuBuild();
+			break;
+		default:
+			// Handle the "recent" list
+			if (menuInfo.parentMenuItemId == 'bamenu_recentlist'){
+				browser.tabs.update(recentIds[menuInfo.menuItemId], {active:true}).then((newTab) => {
+					if (newTab.windowId != currTab.windowId) browser.windows.update(newTab.windowId, {focused: true});
+				});
+				break;
+			}
 	}
 });
 
-// TODO add context menu list (last accessed tab history) -- different permissions
+/**** "Recent List" Functions ****/
+
+function updateRecent(tid){
+	// Populate oRecent for this tab (if necessary)
+	browser.tabs.get(tid).then((currTab) => {
+		if (!(tid in oRecent)){
+			oRecent[tid] = {"url":null, "title":null, "time":null};
+		}
+		oRecent[tid].url = currTab.url;
+		oRecent[tid].title = currTab.title;
+		oRecent[tid].time = new Date(currTab.lastAccessed).toLocaleTimeString();
+		// console.log('oRecent => '+JSON.stringify(oRecent));
+	});
+}
+
+var recentIds = {};
+
+// Update context menu list (last accessed tab history)
+function updateRecentMenu(){
+	var arrWTabs = oTabs['global'];
+	for (var j=0; j<arrWTabs.length; j++){
+		recentIds["recent"+j] = arrWTabs[j];
+		browser.menus.update("recent"+j, {
+			title: oRecent[arrWTabs[j]].time + ' - ' + oRecent[arrWTabs[j]].url 
+		});
+	}
+	for (var i=arrWTabs.length; i<maxGlobal; i++){
+		recentIds["recent"+i] = 'noop';
+		browser.menus.update("recent"+i, {
+			title: ""
+		});
+	}
+}
+
+browser.tabs.onUpdated.addListener((tid, chgInfo, currTab) => {
+	if ('url' in chgInfo){
+		if (tid in oRecent){
+			if (oRecent[tid].url != currTab.url){
+				oRecent[tid].url = currTab.url;
+				oRecent[tid].title = currTab.title;
+				oRecent[tid].time = new Date(currTab.lastAccessed).toLocaleTimeString();
+				updateRecentMenu();
+			}
+		}
+	}
+});
