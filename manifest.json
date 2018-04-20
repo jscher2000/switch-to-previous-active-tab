@@ -2,7 +2,13 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "0.6",
+	"version": "0.7",
+	"applications":{
+		"gecko": {
+			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
+			"strict_min_version": "57.0"
+		}
+	},
 	"developer": {
 		"name": "Jefferson \"jscher2000\" Scher",
 		"url": "https://github.com/jscher2000/switch-to-previous-active-tab"
@@ -19,6 +25,7 @@
 	},
 	"permissions": [
 		"menus",
-		"tabs"
+		"tabs",
+		"storage"
 	]
 }

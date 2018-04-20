@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" href="popup.css" type="text/css">
+<title>Recent Tabs Popup</title>
+</head>
+<body>
+<nav>
+	<ul>
+		<li id="twin" panel="tabthiswin">Window</li>
+		<li id="tall" panel="tabglobal" class="vis">Global</li>
+		<li id="topt" panel="taboptions">Options</li>
+	</ul>
+</nav>
+<div id="panels">
+	<section id="tabthiswin">
+		<ul>
+		</ul>
+	</section>
+	<section id="tabglobal" style="display:block">
+		<ul>
+		</ul>
+	</section>
+	<section id="taboptions">
+		<form id="frmOpts" name="frmOpts" action="javascript:void(0);">
+			<p>Button Action:</p>
+			<p><label><input type="radio" name="buttonaction" value="bswitch" checked> Switch tabs</label> <label><input type="radio" name="buttonaction" value="blist"> Show list</label></p>
+			<p>Scope of Action:</p>
+			<p><label><input type="radio" name="actionscope" value="swin" checked> Current window</label> <label><input type="radio" name="actionscope" value="sglob"> Global</label></p>
+			<p>Additional Preferences:</p>
+			<p><label><input type="checkbox" name="prefprivate"> Include private window tabs</label><br>
+			<label class="controldisabled"><input type="checkbox" name="preficons" disabled> Show site icons (favicons)</label></p>
+			<p><button id="btnSave">Save Settings</button> <input type="reset" value="Clear Changes"></p>
+		</form>
+	</section>
+</div>
+</body>
+<script type="text/javascript" src="popup.js"></script>
+</html>

@@ -4,16 +4,28 @@
   Revision 0.4 - add window/global switch, context menu items on toolbar button
   Revision 0.5 - add recent tabs list (requires tabs permission)
   Revision 0.6 - private windows excluded unless selected; handle detach/attach
+  Revision 0.7 - popup list, add storage
 */
 
 /**** Create and populate data structure ****/
+// Default starting values
+var oPrefs = {
+	maxTabs: 15,				// maximum tabIds to store per window
+	maxGlobal: 60,				// maximum tabIds to store across all windows
+	popuptab: 1,				// default tab in popup.html
+	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
+	blnSameWindow: true,		// Button switches within same window vs. global
+	blnIncludePrivate: false,	// Include private window tabs
+	blnShowFavicons: false		// Whether to show site icons on recents list
+}
+// Update oPrefs from storage
+browser.storage.local.get("prefs").then((results) => {
+	if (JSON.stringify(results) != '{}') oPrefs = results.prefs;
+}).catch((err) => {console.log('Error retrieving storage: '+err.message);});
 
-// TODO make this user configurable
-var maxTabs = 5;      // maximum tabIds to store per window
-var maxGlobal = 15;   // maximum tabIds to store across all windows
+var oTabs = {};			// store arrays of tabId's in descending order by lastAccessed
+var oRecent = {};		// store titles and URLs for MRU popup
 
-var oTabs = {};
-var oRecent = {};
 function initObjects(){
 	// Initialize oTabs object with up to maxTabs recent tabs per window
 	browser.tabs.query({}).then((arrAllTabs) => {
@@ -22,9 +34,9 @@ function initObjects(){
 		// Store tabIds to oTabs
 		var i, gCount = 0, arrWTabs;
 		for (i=0; i<arrAllTabs.length; i++){
-			if (blnIgnorePrivate === false || arrAllTabs[i].incognito != true){
+			if (oPrefs.blnIncludePrivate == true || arrAllTabs[i].incognito === false){
 				// Add to global list for i=0 through maxGlobal-1 (order among windows is unpredictable)
-				if (gCount < maxGlobal) {
+				if (gCount < oPrefs.maxGlobal) {
 					if (!('global' in oTabs)) {
 						oTabs['global'] = [arrAllTabs[i].id];
 					} else {
@@ -39,7 +51,7 @@ function initObjects(){
 					oTabs[arrAllTabs[i].windowId] = [arrAllTabs[i].id];
 				} else {
 					arrWTabs = oTabs[arrAllTabs[i].windowId];
-					if (arrWTabs.length < maxTabs) {
+					if (arrWTabs.length < oPrefs.maxTabs) {
 						arrWTabs.push(arrAllTabs[i].id);
 						oTabs[arrAllTabs[i].windowId] = arrWTabs;
 					}
@@ -52,7 +64,7 @@ function initObjects(){
 		browser.tabs.query({windowId: browser.windows.WINDOW_ID_CURRENT, active: true}).then((arrQTabs) => {
 			if (arrQTabs.length < 1) console.log('Error getting active tab in current window');
 			else {
-				if (blnIgnorePrivate === false || arrQTabs[0].incognito != true){
+				if (oPrefs.blnIncludePrivate == true || arrQTabs[0].incognito === false){
 					var arrWTabs = oTabs['global'];
 					// Handle case of tabId in the existing list
 					var pos = arrWTabs.indexOf(arrQTabs[0].id);
@@ -68,7 +80,7 @@ function initObjects(){
 						// not in list, add to front
 						arrWTabs.unshift(arrQTabs[0].id);
 						// check length and trim off the last if too long
-						if (arrWTabs.length > maxGlobal) arrWTabs.pop();
+						if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
 						// store change
 						oTabs['global'] = arrWTabs;
 					} else {
@@ -98,7 +110,7 @@ initObjects();
 browser.tabs.onActivated.addListener((info) => {
 	//console.log('Handling onActivated for id: '+info.tabId);
 	browser.tabs.get(info.tabId).then((currTab) => {
-		if (blnIgnorePrivate === false || currTab.incognito != true){
+		if (oPrefs.blnIncludePrivate == true || currTab.incognito === false){
 			// Update global tabIds array
 			var arrWTabs = oTabs['global'];
 			//   Handle case of tabId in the existing list
@@ -115,7 +127,7 @@ browser.tabs.onActivated.addListener((info) => {
 				// not in list, add to front
 				arrWTabs.unshift(info.tabId);
 				// check length and trim off the last if too long
-				if (arrWTabs.length > maxGlobal) arrWTabs.pop();
+				if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
 				// store change
 				oTabs['global'] = arrWTabs;
 			} else {
@@ -133,7 +145,7 @@ browser.tabs.onActivated.addListener((info) => {
 							oTabs[foundtabs[i].windowId] = [foundtabs[i].id];
 						} else {
 							arrWTabs = oTabs[foundtabs[i].windowId];
-							if (arrWTabs.length < maxTabs) {
+							if (arrWTabs.length < oPrefs.maxTabs) {
 								arrWTabs.push(foundtabs[i].id);
 								oTabs[foundtabs[i].windowId] = arrWTabs;
 							}
@@ -155,7 +167,7 @@ browser.tabs.onActivated.addListener((info) => {
 					// not in list, add to front
 					arrWTabs.unshift(info.tabId);
 					// check length and trim off the last if too long
-					if (arrWTabs.length > maxTabs) arrWTabs.pop();
+					if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
 					// store change
 					oTabs[info.windowId] = arrWTabs;
 				} else {
@@ -169,7 +181,6 @@ browser.tabs.onActivated.addListener((info) => {
 			
 			// Update Recents
 			updateRecent(info.tabId);
-			updateRecentMenu();
 		}
 	}).catch((err) => {console.log('Promise rejected on tabs.get(): '+err.message);});
 });
@@ -210,7 +221,6 @@ browser.tabs.onRemoved.addListener((id, info) => {
 
 	// Update Recents
 	if (id in oRecent) delete oRecent[id];
-	updateRecentMenu();
 });
 
 // Listen for tab detach and update oTabs
@@ -230,7 +240,7 @@ browser.tabs.onDetached.addListener((id, info) => {
 	}
 	//  Add to new
 	browser.tabs.get(id).then((gotTab) => {
-		if (blnIgnorePrivate === false || gotTab.incognito != true){
+		if (oPrefs.blnIncludePrivate == true || gotTab.incognito === false){
 			// Update window-specific tabIds array
 			var arrWTabs = oTabs[gotTab.windowId];
 			//   Handle case of new window (can't assume)
@@ -252,7 +262,7 @@ browser.tabs.onDetached.addListener((id, info) => {
 				// not in list, add to front
 				arrWTabs.unshift(id);
 				// check length and trim off the last if too long
-				if (arrWTabs.length > maxTabs) arrWTabs.pop();
+				if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
 				// store change
 				oTabs[gotTab.windowId] = arrWTabs;
 			} else {
@@ -266,7 +276,6 @@ browser.tabs.onDetached.addListener((id, info) => {
 
 	// Update Recents
 	updateRecent(id);
-	updateRecentMenu();
 });
 
 // Listen for tab attach and update oTabs
@@ -277,7 +286,7 @@ browser.tabs.onAttached.addListener((id, info) => {
 	// Update window-specific tabIds arrays
 	//  Add to new
 	browser.tabs.get(id).then((gotTab) => {
-		if (blnIgnorePrivate === false || gotTab.incognito != true){
+		if (oPrefs.blnIncludePrivate == true || gotTab.incognito === false){
 			// Update window-specific tabIds array
 			var arrWTabs = oTabs[info.newWindowId];
 			//   Handle case of new window (can't assume)
@@ -299,7 +308,7 @@ browser.tabs.onAttached.addListener((id, info) => {
 				// not in list, add to front
 				arrWTabs.unshift(id);
 				// check length and trim off the last if too long
-				if (arrWTabs.length > maxTabs) arrWTabs.pop();
+				if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
 				// store change
 				oTabs[info.newWindowId] = arrWTabs;
 			} else {
@@ -313,7 +322,6 @@ browser.tabs.onAttached.addListener((id, info) => {
 
 	// Update Recents
 	updateRecent(id);
-	updateRecentMenu();
 });
 
 
@@ -334,7 +342,7 @@ browser.windows.onFocusChanged.addListener((wid) => {
 		if (foundtabs.length < 1) return; // some weird window?
 		// Update toolbar button
 		setButton(wid);
-		if (blnIgnorePrivate === false || foundtabs[0].incognito != true){
+		if (oPrefs.blnIncludePrivate == true || foundtabs[0].incognito === false){
 			// Update globals
 			var arrWTabs = oTabs['global'];
 			// Handle case of tabId in the existing list
@@ -351,7 +359,7 @@ browser.windows.onFocusChanged.addListener((wid) => {
 				// not in list, add to front
 				arrWTabs.unshift(foundtabs[0].id);
 				// check length and trim off the last if too long
-				if (arrWTabs.length > maxGlobal) arrWTabs.pop();
+				if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
 				// store change
 				oTabs['global'] = arrWTabs;
 			} else {
@@ -361,7 +369,6 @@ browser.windows.onFocusChanged.addListener((wid) => {
 
 			// Update Recents
 			updateRecent(foundtabs[0].id);
-			updateRecentMenu();
 		}
 	}).catch((err) => {console.log('Promise rejected on tabs.query(): '+err.message);});
 });
@@ -369,23 +376,36 @@ browser.windows.onFocusChanged.addListener((wid) => {
 
 /**** Set up toolbar button listener and button/tooltip toggler ****/
 
-var blnSameWindow = true;
-var blnIgnorePrivate = true;
-
 // Listen for button click and switch to previous tab
 browser.browserAction.onClicked.addListener((currTab) => {
-	if (blnSameWindow) {
-		// Within window switch
-		doSwitch(currTab.windowId, currTab.windowId);
+	if (oPrefs.blnButtonSwitches) {
+		if (oPrefs.blnSameWindow) {
+			// Within window switch
+			doSwitch(currTab.windowId, currTab.windowId);
+		} else {
+			// Unrestricted switch
+			doSwitch('global', currTab.windowId);
+		}
 	} else {
-		// Unrestricted switch
-		doSwitch('global', currTab.windowId);
+		if (oPrefs.blnSameWindow) {
+			// Current window list
+			oPrefs.popuptab = 0;
+			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
+		} else {
+			// Global list
+			oPrefs.popuptab = 1;
+			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
+		}		
 	}
 });
 
 function doSwitch(oKey, wid){
 	var arrWTabs = oTabs[oKey];
-	if (arrWTabs.length > 1) {
+	if (arrWTabs && arrWTabs.length > 1) {
 		browser.tabs.update(arrWTabs[1], {active:true}).then((currTab) => {
 			if (currTab.windowId != wid) browser.windows.update(currTab.windowId, {focused: true});
 		});
@@ -394,12 +414,13 @@ function doSwitch(oKey, wid){
 
 // Set icon image and tooltip based on ability to switch within current window
 function setButton(wid){
+	// TODO: dim icon in private windows if nonfunctional there
 	var arrWTabs = oTabs[wid];
 	if (!arrWTabs) return; // window focused but tab data not available yet
 	if (arrWTabs.length > 1) {
 		browser.browserAction.setIcon({path: 'icons/lasttab.png'});
 		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
-	} else if (blnSameWindow || oTabs['global'].length < 2) {
+	} else if (oPrefs.blnSameWindow || oTabs['global'].length < 2) {
 		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
 		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'}); 
 	}
@@ -420,39 +441,14 @@ browser.menus.create({
 });
 
 browser.menus.create({
-  id: "bamenu_chk_window",
-  type: "checkbox",
-  title: "Button Switches Within the Same Window",
-  contexts: ["browser_action"],
-  checked: blnSameWindow
-});
-
-browser.menus.create({
-  id: "bamenu_chk_private",
-  type: "checkbox",
-  title: "Ignore Private Window Tabs",
-  contexts: ["browser_action"],
-  checked: blnIgnorePrivate
-});
-
-browser.menus.create({
-  id: "bamenu_recentlist",
-  title: "Recently Active Tabs",
+  id: "bamenu_popup",
+  title: "List Recent Tabs",
   contexts: ["browser_action"]
 });
 
-for (var j=0; j<maxGlobal; j++){
-	browser.menus.create({
-		id: "recent"+j,
-		title: "TBD",
-		contexts: ["browser_action"],
-		parentId: "bamenu_recentlist"
-	});
-}
-
 browser.menus.create({
-  id: "bamenu_endseparator",
-  type: "separator",
+  id: "bamenu_options",
+  title: "Options",
   contexts: ["browser_action"]
 });
 
@@ -466,35 +462,26 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 			// Unrestricted switch
 			doSwitch('global', currTab.windowId);
 			break;
-		case 'bamenu_chk_window':
-			if (menuInfo.checked) blnSameWindow = true;
-			else blnSameWindow = false;
-			setButton(currTab.windowId);
+		case 'bamenu_popup':
+			oPrefs.popuptab = 1;
+			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
 			break;
-		case 'bamenu_chk_private':
-			if (menuInfo.checked) blnIgnorePrivate = true;
-			else blnIgnorePrivate = false;
-			// Rebuild lists immediately
-			oTabs['global'] = [];
-			initObjects();
-			break;
-		case 'bamenu_recentlist':
-			// Refresh/build submenu items?
+		case 'bamenu_options':
+			oPrefs.popuptab = 2;
+			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
 			break;
 		default:
-			// Handle the "recent" list
-			if (menuInfo.parentMenuItemId == 'bamenu_recentlist'){
-				if (recentIds[menuInfo.menuItemId] != 'noop'){
-					browser.tabs.update(recentIds[menuInfo.menuItemId], {active:true}).then((newTab) => {
-						if (newTab.windowId != currTab.windowId) browser.windows.update(newTab.windowId, {focused: true});
-					});
-				}
-				break;
-			}
-	}
+			// TBD
+		}
 });
 
 /**** "Recent List" Functions ****/
+var dNow = new Date(); 
+var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0); 
 
 function updateRecent(tid){
 	// Populate oRecent for this tab (if necessary)
@@ -504,46 +491,14 @@ function updateRecent(tid){
 		}
 		oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 		oRecent[tid].title = currTab.title;
-		oRecent[tid].time = new Date(currTab.lastAccessed).toLocaleTimeString();
-		oRecent[tid].incog = (currTab.incognito) ? '{p} ' : '';
-		// console.log('oRecent => '+JSON.stringify(oRecent));
+		oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+		oRecent[tid].incog = currTab.incognito;
+		oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
+		//oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 	});
 }
 
 var recentIds = {};
-
-// Update context menu list (last accessed tab history)
-function updateRecentMenu(){
-	var arrWTabs = oTabs['global'];
-	for (var j=0; j<arrWTabs.length; j++){
-		recentIds["recent"+j] = arrWTabs[j];
-		if (arrWTabs[j] in oRecent){
-			browser.menus.update("recent"+j, {
-				title: oRecent[arrWTabs[j]].time + ' - ' + oRecent[arrWTabs[j]].incog + oRecent[arrWTabs[j]].url 
-			});
-		} else {
-			browser.tabs.get(arrWTabs[j]).then((currTab) => {
-				if (!(arrWTabs[j] in oRecent)){
-					oRecent[arrWTabs[j]] = {"url":null, "title":null, "time":null};
-				}
-				oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-				oRecent[arrWTabs[j]].title = currTab.title;
-				oRecent[arrWTabs[j]].time = new Date(currTab.lastAccessed).toLocaleTimeString();
-				oRecent[arrWTabs[j]].incog = (currTab.incognito) ? '{p} ' : '';
-			}).then(function () {
-				browser.menus.update("recent"+j, {
-					title: oRecent[arrWTabs[j]].time + ' - ' + oRecent[arrWTabs[j]].incog + oRecent[arrWTabs[j]].url 
-				});
-			});
-		}
-	}
-	for (var i=arrWTabs.length; i<maxGlobal; i++){
-		recentIds["recent"+i] = 'noop';
-		browser.menus.update("recent"+i, {
-			title: ""
-		});
-	}
-}
 
 browser.tabs.onUpdated.addListener((tid, chgInfo, currTab) => {
 	if ('url' in chgInfo){
@@ -551,9 +506,49 @@ browser.tabs.onUpdated.addListener((tid, chgInfo, currTab) => {
 			if (oRecent[tid].url != currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '')){
 				oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 				oRecent[tid].title = currTab.title;
-				oRecent[tid].time = new Date(currTab.lastAccessed).toLocaleTimeString();
-				updateRecentMenu();
+				oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+				oRecent[tid].incog = currTab.incognito;
+				oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
+				//oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 			}
 		}
 	}
 });
+
+/**** MESSAGING ****/
+
+function handleMessage(request, sender, sendResponse) {
+	if ("want" in request) {
+		if (request.want == "global") {
+			var oGlobal = {};
+			oGlobal['glist'] = oTabs['global'];
+			oGlobal['details'] = oRecent;
+			sendResponse({
+				response: oGlobal
+			});
+			return true;
+		} else if (request.want == "settings") {
+			sendResponse({
+				response: oPrefs
+			})
+		} else {
+			var oWindow = {};
+			oWindow['wlist'] = oTabs[request.want];
+			oWindow['details'] = oRecent;
+			sendResponse({
+				response: oWindow
+			});
+			return true;
+		}
+	} else if ("update" in request) {
+		// receive form updates, store to oPrefs, and commit to storage
+		var oSettings = request["update"];
+		oPrefs.blnButtonSwitches = oSettings.blnButtonSwitches;
+		oPrefs.blnSameWindow = oSettings.blnSameWindow;
+		oPrefs.blnIncludePrivate = oSettings.blnIncludePrivate;
+		oPrefs.blnShowFavicons = oSettings.blnShowFavicons;
+		browser.storage.local.set({prefs: oPrefs})
+			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
+	}
+}
+browser.runtime.onMessage.addListener(handleMessage);
