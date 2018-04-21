@@ -5,6 +5,7 @@
   Revision 0.5 - add recent tabs list (requires tabs permission)
   Revision 0.6 - private windows excluded unless selected; handle detach/attach
   Revision 0.7 - popup list, add storage
+  Revision 0.8 - refine popup behavior, color scheme/height options
 */
 
 /**** Create and populate data structure ****/
@@ -16,11 +17,22 @@ var oPrefs = {
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 	blnSameWindow: true,		// Button switches within same window vs. global
 	blnIncludePrivate: false,	// Include private window tabs
-	blnShowFavicons: false		// Whether to show site icons on recents list
+	blnShowFavicons: false,		// Whether to show site icons on recents list
+	blnKeepOpen: true,			// When switching in the same window, keep popup open
+	blnDark: false,				// Toggle colors to bright-on-dark
+	sectionHeight: "490px"		// Height of list panel sections
 }
 // Update oPrefs from storage
 browser.storage.local.get("prefs").then((results) => {
-	if (JSON.stringify(results) != '{}') oPrefs = results.prefs;
+	if (results.prefs != undefined){
+		if (JSON.stringify(results.prefs) != '{}'){
+			var arrSavedPrefs = Object.keys(results.prefs)
+			for (var j=0; j<arrSavedPrefs.length; j++){
+				//console.log(arrSavedPrefs[j] + ": " + results.prefs[arrSavedPrefs[j]]);
+				oPrefs[arrSavedPrefs[j]] = results.prefs[arrSavedPrefs[j]];
+			}
+		}
+	}
 }).catch((err) => {console.log('Error retrieving storage: '+err.message);});
 
 var oTabs = {};			// store arrays of tabId's in descending order by lastAccessed
@@ -547,6 +559,9 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.blnSameWindow = oSettings.blnSameWindow;
 		oPrefs.blnIncludePrivate = oSettings.blnIncludePrivate;
 		oPrefs.blnShowFavicons = oSettings.blnShowFavicons;
+		oPrefs.blnKeepOpen = oSettings.blnKeepOpen;
+		oPrefs.blnDark = oSettings.blnDark;
+		oPrefs.sectionHeight = oSettings.sectionHeight;
 		browser.storage.local.set({prefs: oPrefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 	}

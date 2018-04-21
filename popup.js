@@ -39,17 +39,37 @@ function getSettings(){
 			if (document.querySelector('input[name="preficons"]').hasAttribute('checked'))
 				document.querySelector('input[name="preficons"]').removeAttribute('checked');
 		}
+		// Appearance adjustments
+		if (oPrefs.blnKeepOpen){
+			document.querySelector('input[name="prefkeepopen"]').setAttribute('checked', 'checked');
+		} else {
+			if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
+				document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
+		}
+		if (oPrefs.blnDark){
+			document.body.className = 'dark';
+			document.querySelector('input[name="prefdark"]').setAttribute('checked', 'checked');
+		} else {
+			document.body.className = '';
+			if (document.querySelector('input[name="prefdark"]').hasAttribute('checked'))
+				document.querySelector('input[name="prefdark"]').removeAttribute('checked');
+		}
+		if (oPrefs.sectionHeight){
+			setHeight(oPrefs.sectionHeight);
+			document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
+		}
 	}).catch((err) => {
 		console.log('Problem getting settings: '+err.message);
 		return {what: "damn"}; // do some defaults here
 	});
 }
 
-function getGlobal(){
+function getGlobal(blnClear){
 	browser.runtime.sendMessage({
 		want: "global"
 	}).then((oGlobal) => {
 		var dest = document.querySelector('#tabglobal ul');
+		if (blnClear) dest.innerHTML = '';
 		var arrWTabs = oGlobal.response.glist;
 		var oRecent = oGlobal.response.details;
 		for (var j=0; j<arrWTabs.length; j++){
@@ -78,12 +98,13 @@ function getGlobal(){
 	}).catch((err) => {console.log('Problem getting global: '+err.message);});
 }
 
-function getWindow(){
+function getWindow(blnClear){
 	browser.windows.getCurrent().then( (wind) => {
 		browser.runtime.sendMessage({
 			want: wind.id
 		}).then((oWindow) => {
 			var dest = document.querySelector('#tabthiswin ul');
+			if (blnClear) dest.innerHTML = '';
 			var arrWTabs = oWindow.response.wlist;
 			var oRecent = oWindow.response.details;
 			for (var j=0; j<arrWTabs.length; j++){
@@ -145,18 +166,34 @@ function gotoTab(evt){
 	}
 	browser.tabs.update(parseInt(tgt.id), {active:true}).then((newTab) => {
 		browser.windows.getCurrent().then((wind) => {
-			if (newTab.windowId != wind.id) browser.windows.update(newTab.windowId, {focused: true});
+			if (newTab.windowId == wind.id){
+				if (oPrefs.blnKeepOpen){
+					// Staying in same window, update panel
+					getWindow(true);
+					getGlobal(true);
+				} else {
+					self.close();
+				}
+			} else {
+				// Change window, close panel
+				browser.windows.update(newTab.windowId, {focused: true});
+				self.close();
+			}
 		});
 	});
 }
 
 getSettings();
 getGlobal();
-getWindow();
+getWindow(false);
 document.querySelector('nav > ul').addEventListener('click', panelClick, false);
 document.querySelector('#tabthiswin').addEventListener('click', gotoTab, false);
 document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
 document.querySelector('#btnSave').addEventListener('click', updatePrefs, false);
+document.querySelector('#btnReset').addEventListener('click', clearForm, false);
+document.querySelector('input[name="prefdark"]').addEventListener('click', updateDarkmode, false);
+document.querySelector('input[name="prefheight"]').addEventListener('change', setHeight, false);
+document.querySelector('#height490').addEventListener('click', revertHeight, false);
 
 function updatePrefs(evt){
 	// Update oPrefs
@@ -168,6 +205,14 @@ function updatePrefs(evt){
 	else oPrefs.blnIncludePrivate = false;
 	if (document.querySelector('input[name="preficons"]').checked) oPrefs.blnShowFavicons = true;
 	else oPrefs.blnShowFavicons = false;
+	if (document.querySelector('input[name="prefkeepopen"]').checked) oPrefs.blnKeepOpen = true;
+	else oPrefs.blnKeepOpen = false;
+	if (document.querySelector('input[name="prefdark"]').checked) oPrefs.blnDark = true;
+	else oPrefs.blnDark = false;
+	var intHeight = document.querySelector('input[name="prefheight"]').value;
+	if (intHeight >= 300 && intHeight <= 1000){
+		oPrefs.sectionHeight = '' + intHeight + 'px';
+	}
 	// send to background script
 	browser.runtime.sendMessage({
 		update: oPrefs
@@ -177,4 +222,43 @@ function updatePrefs(evt){
 }
 function cleanse(txt){
 	return txt.replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
+}
+function updateDarkmode(evt){
+	if (evt && evt.target) var chk = evt.target;
+	else var chk = document.querySelector('input[name="prefdark"]');
+	if (chk.checked){
+		document.body.className = 'dark';
+	} else {
+		document.body.className = '';
+	}
+}
+function setHeight(inp){
+	if (typeof inp == 'string'){
+		// add or modify style block
+		var r = document.createTextNode('section{height: '+inp+';}');
+		var s = document.getElementById('panelheight');
+		if (!s){
+			s = document.createElement('style');
+			s.id = 'panelheight';
+			document.body.appendChild(s);
+		}
+		s.appendChild(r);
+		document.getElementById('taboptions').style.height = '';
+	} else {
+		if (inp.target){
+			document.getElementById('taboptions').style.height = '' + inp.target.value + 'px';
+		} else {
+			console.log('inp is some unknown '+ typeof inp);
+		}
+	}
+}
+function revertHeight(evt){
+	document.querySelector('input[name="prefheight"]').value = 490;
+	setHeight('490px');
+}
+function clearForm(evt){
+	document.getElementById('frmOpts').reset();
+	updateDarkmode(null);
+	document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
+	setHeight(oPrefs.sectionHeight);
 }
