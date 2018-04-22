@@ -23,7 +23,7 @@
 		</ul>
 	</section>
 	<section id="taboptions">
-		<form id="frmOpts" name="frmOpts" action="javascript:void(0);">
+		<form id="frmOpts" name="frmOpts" action="#">
 			<table border="0" cellspacing="0" cellpadding="0" style="width: 100%"><tbody>
 				<tr>
 					<td style="width: 50%">
@@ -31,21 +31,21 @@
 						<p><label><input type="radio" name="buttonaction" value="bswitch" checked> Switch tabs</label> <label><input type="radio" name="buttonaction" value="blist"> Show list</label></p>
 						<p>Scope of Action:</p>
 						<p><label><input type="radio" name="actionscope" value="swin" checked> Current window</label> <label><input type="radio" name="actionscope" value="sglob"> Global</label></p>
-						<p>Additional Preferences:</p>
-						<p><label><input type="checkbox" name="prefprivate"> Include private window tabs</label><br>
-						<label class="controldisabled"><input type="checkbox" name="preficons" disabled> Show site icons (favicons)</label></p>
 					</td>
 					<td style="width: 50%">
 						<p>Popup Panel:</p>
-						<p><label><input type="checkbox" name="prefkeepopen" checked> Keep open in same window</label></p>
-						<p><label><input type="checkbox" name="prefdark"> Dark color scheme</label></p>
+						<p><label><input type="checkbox" name="prefkeepopen" checked> Keep open in same window</label><br>
+						<label><input type="checkbox" name="prefdark"> Dark color scheme</label></p>
 						<p>List area height: <input type="number" name="prefheight" step="5" value="490" min="300" max="900" style="width: 45px; transform: scale(2) translateY(-2px); margin-left: 30px; padding-top: 0; padding-bottom: 0;"> <button id="height490" title="Default height" style="transform: translateX(30px)">490</button><br>
 						(accepts 300-900 in steps of 5)</p>
 					</td>
 				</tr>
 				<tr>
 					<td colspan="2">
-						<p style="text-align: center"><button id="btnSave">Save Settings</button> <button id="btnReset">Clear Changes</button></p>
+						<p style="border-top: 1px solid #888; padding-top:0.75em">Privacy-Related Preferences &mdash; Use with Caution:</p>
+						<p><label><input type="checkbox" name="prefprivate"> Include private window tabs</label><br>
+						<label><input type="checkbox" name="preficons"> Show site icons (favicons) for non-private tabs <em>(sends the site its cookies)</em></label></p>
+						<p style="border-top: 1px solid #888; padding-top:0.75em; text-align: center"><button id="btnSave">Save Settings</button> <button id="btnReset">Clear Changes</button> <button id="btnReinit">Rebuild All Lists</button></p>
 					</td>
 				</tr>
 			</tbody></table>

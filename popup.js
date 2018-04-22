@@ -1,4 +1,9 @@
 var oPrefs;
+var dNow = new Date(); 
+var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0);
+var reinitPrivate = false;
+var reinitFavicons = false;
+
 function getSettings(){
 	browser.runtime.sendMessage({
 		want: "settings"
@@ -74,9 +79,12 @@ function getGlobal(blnClear){
 		var oRecent = oGlobal.response.details;
 		for (var j=0; j<arrWTabs.length; j++){
 			if (arrWTabs[j] in oRecent){
-				dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img src="' + oRecent[arrWTabs[j]].imgPath + '">' + 
-				cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-				oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+				if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
+					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+					fixPath(oRecent[arrWTabs[j]]) + '">' + 
+					cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
+					oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+				}
 			} else {
 				browser.tabs.get(arrWTabs[j]).then((currTab) => {
 					if (!(arrWTabs[j] in oRecent)){
@@ -84,13 +92,17 @@ function getGlobal(blnClear){
 					}
 					oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 					oRecent[arrWTabs[j]].title = currTab.title;
-					oRecent[arrWTabs[j]].time = new Date(currTab.lastAccessed).toLocaleTimeString();
+					oRecent[arrWTabs[j]].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+					oRecent[arrWTabs[j]].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 					oRecent[arrWTabs[j]].incog = currTab.incognito;
-					oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
+					oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[arrWTabs[j]].icon;
 				}).then(function () {
-					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img src="' + oRecent[arrWTabs[j]].imgPath + '">' + 
-					cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-					oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+					if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
+						dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+						fixPath(oRecent[arrWTabs[j]]) + '">' + 
+						cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
+						oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+					}
 				});
 			}
 			if (j==29) break;
@@ -106,32 +118,63 @@ function getWindow(blnClear){
 			var dest = document.querySelector('#tabthiswin ul');
 			if (blnClear) dest.innerHTML = '';
 			var arrWTabs = oWindow.response.wlist;
-			var oRecent = oWindow.response.details;
-			for (var j=0; j<arrWTabs.length; j++){
-				if (arrWTabs[j] in oRecent){
-					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img src="' + oRecent[arrWTabs[j]].imgPath + '">' + 
-					cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-					oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
-				} else {
-					browser.tabs.get(arrWTabs[j]).then((currTab) => {
-						if (!(arrWTabs[j] in oRecent)){
-							oRecent[arrWTabs[j]] = {"url":null, "title":null, "time":null};
+			if (arrWTabs){
+				var oRecent = oWindow.response.details;
+				for (var j=0; j<arrWTabs.length; j++){
+					if (arrWTabs[j] in oRecent){
+						if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
+							dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+							fixPath(oRecent[arrWTabs[j]]) + '">' + 
+							cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
+							oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
 						}
-						oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-						oRecent[arrWTabs[j]].title = currTab.title;
-						oRecent[arrWTabs[j]].time = new Date(currTab.lastAccessed).toLocaleTimeString();
-						oRecent[arrWTabs[j]].incog = currTab.incognito;
-						oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
-					}).then(function () {
-						dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img src="' + oRecent[arrWTabs[j]].imgPath + '">' + 
-						cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-						oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
-					});
+					} else {
+						browser.tabs.get(arrWTabs[j]).then((currTab) => {
+							if (!(arrWTabs[j] in oRecent)){
+								oRecent[arrWTabs[j]] = {"url":null, "title":null, "time":null};
+							}
+							oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
+							oRecent[arrWTabs[j]].title = currTab.title;
+							oRecent[arrWTabs[j]].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+							oRecent[arrWTabs[j]].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
+							oRecent[arrWTabs[j]].incog = currTab.incognito;
+							oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[arrWTabs[j]].icon;
+						}).then(function () {
+							if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
+								dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+								fixPath(oRecent[arrWTabs[j]]) + '">' + 
+								cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
+								oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+							}
+						});
+					}
+					if (j==14) break;
 				}
-				if (j==14) break;
 			}
 		}).catch((err) => {console.log('Problem getting window: '+err.message);});
+		if (wind.incognito){
+			var mask = document.createElement('img');
+			mask.src = 'icons/pbmaskonpurple.svg';
+			mask.setAttribute('style', 'position:absolute;right:18px;margin-top:-6px;');
+			document.getElementsByTagName('nav')[0].appendChild(mask);
+		}
 	});
+}
+
+function fixPath(tabdata){
+	if (tabdata.incog){
+		return 'icons/privateBrowsing.svg';
+	} else if (tabdata.icon.indexOf('http://') == 0 || tabdata.icon.indexOf('https://') == 0){
+		if (oPrefs.blnShowFavicons){
+			return tabdata.imgPath;
+		} else {
+			return 'icons/defaultFavicon.svg';
+		}
+	} else if (tabdata.url.indexOf('file:///') == 0){
+		return 'icons/folder-16.svg';
+	} else {
+		return 'icons/square.svg';
+	}
 }
 
 /**** Event handlers ****/
@@ -184,8 +227,8 @@ function gotoTab(evt){
 }
 
 getSettings();
-getGlobal();
-getWindow(false);
+getGlobal(true);
+getWindow(true);
 document.querySelector('nav > ul').addEventListener('click', panelClick, false);
 document.querySelector('#tabthiswin').addEventListener('click', gotoTab, false);
 document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
@@ -194,6 +237,7 @@ document.querySelector('#btnReset').addEventListener('click', clearForm, false);
 document.querySelector('input[name="prefdark"]').addEventListener('click', updateDarkmode, false);
 document.querySelector('input[name="prefheight"]').addEventListener('change', setHeight, false);
 document.querySelector('#height490').addEventListener('click', revertHeight, false);
+document.querySelector('#btnReinit').addEventListener('click', doReinit, false);
 
 function updatePrefs(evt){
 	// Update oPrefs
@@ -201,10 +245,20 @@ function updatePrefs(evt){
 	else oPrefs.blnButtonSwitches = false;
 	if (document.querySelector('input[value="swin"]').checked) oPrefs.blnSameWindow = true;
 	else oPrefs.blnSameWindow = false;
-	if (document.querySelector('input[name="prefprivate"]').checked) oPrefs.blnIncludePrivate = true;
-	else oPrefs.blnIncludePrivate = false;
-	if (document.querySelector('input[name="preficons"]').checked) oPrefs.blnShowFavicons = true;
-	else oPrefs.blnShowFavicons = false;
+	if (document.querySelector('input[name="prefprivate"]').checked){
+		if (oPrefs.blnIncludePrivate != true) reinitPrivate = true;
+		oPrefs.blnIncludePrivate = true;
+	} else {
+		if (oPrefs.blnIncludePrivate != false) reinitPrivate = true;
+		oPrefs.blnIncludePrivate = false;
+	}
+	if (document.querySelector('input[name="preficons"]').checked){
+		if (oPrefs.blnShowFavicons != true) reinitFavicons = true;
+		oPrefs.blnShowFavicons = true;
+	} else {
+		if (oPrefs.blnShowFavicons != false) reinitFavicons = true;
+		oPrefs.blnShowFavicons = false;
+	}
 	if (document.querySelector('input[name="prefkeepopen"]').checked) oPrefs.blnKeepOpen = true;
 	else oPrefs.blnKeepOpen = false;
 	if (document.querySelector('input[name="prefdark"]').checked) oPrefs.blnDark = true;
@@ -217,6 +271,11 @@ function updatePrefs(evt){
 	browser.runtime.sendMessage({
 		update: oPrefs
 	});
+	// Need to refresh lists if the private or favicon prefs were changed
+	if (reinitPrivate || reinitFavicons){
+		getGlobal(true);
+		getWindow(true);
+	}
 	// cancel form submit
 	return false;
 }
@@ -261,4 +320,12 @@ function clearForm(evt){
 	updateDarkmode(null);
 	document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
 	setHeight(oPrefs.sectionHeight);
+}
+function doReinit(evt){
+	if(confirm('Clear recent tabs lists and requery all tabs?')){
+		browser.runtime.sendMessage({
+			reinit: true
+		});
+		self.close();
+	}
 }

@@ -69,6 +69,9 @@ section ul li {
 }
 section ul li:nth-child(even){
 	background-color: #e0f0ff;
+}
+section ul li:first-of-type {
+	cursor: unset;
 } 
 section ul li > span:not(.right) {
 	position: absolute;
@@ -107,13 +110,17 @@ section ul li > span.right > span {
 	background-color: #f8f8f8;
 	display: none;
 }
-#frmOpts p {
-	font-size: 16px;
-	margin-bottom: 0;
-}
 #frmOpts td {
 	vertical-align: top;
 	padding: 0 24px;
+}
+#frmOpts p {
+	font-size: 16px;
+	margin-top: 0.75em;
+	margin-bottom: 0;
+}
+#frmOpts tr:first-of-type td p:first-of-type {
+	margin-top: 1em;
 }
 .controldisabled {
 	color: #aaa;

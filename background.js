@@ -6,6 +6,7 @@
   Revision 0.6 - private windows excluded unless selected; handle detach/attach
   Revision 0.7 - popup list, add storage
   Revision 0.8 - refine popup behavior, color scheme/height options
+  Revision 0.9 - option to show site icons on the popup, rebuild button
 */
 
 /**** Create and populate data structure ****/
@@ -17,7 +18,7 @@ var oPrefs = {
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 	blnSameWindow: true,		// Button switches within same window vs. global
 	blnIncludePrivate: false,	// Include private window tabs
-	blnShowFavicons: false,		// Whether to show site icons on recents list
+	blnShowFavicons: true,		// Whether to show site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
 	blnDark: false,				// Toggle colors to bright-on-dark
 	sectionHeight: "490px"		// Height of list panel sections
@@ -40,33 +41,32 @@ var oRecent = {};		// store titles and URLs for MRU popup
 
 function initObjects(){
 	// Initialize oTabs object with up to maxTabs recent tabs per window
+	oTabs = {}; // flush
 	browser.tabs.query({}).then((arrAllTabs) => {
 		// Sort array of tab objects in descending order by lastAccessed (numeric)
 		arrAllTabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
 		// Store tabIds to oTabs
 		var i, gCount = 0, arrWTabs;
 		for (i=0; i<arrAllTabs.length; i++){
-			if (oPrefs.blnIncludePrivate == true || arrAllTabs[i].incognito === false){
-				// Add to global list for i=0 through maxGlobal-1 (order among windows is unpredictable)
-				if (gCount < oPrefs.maxGlobal) {
-					if (!('global' in oTabs)) {
-						oTabs['global'] = [arrAllTabs[i].id];
-					} else {
-						arrWTabs = oTabs['global'];
-						arrWTabs.push(arrAllTabs[i].id);
-						oTabs['global'] = arrWTabs;
-					}
-					gCount++;
-				}
-				// Add to window-specific lists
-				if (!(arrAllTabs[i].windowId in oTabs)) {
-					oTabs[arrAllTabs[i].windowId] = [arrAllTabs[i].id];
+			// Add to global list for i=0 through maxGlobal-1 (order among windows is unpredictable)
+			if (gCount < oPrefs.maxGlobal) {
+				if (!('global' in oTabs)) {
+					oTabs['global'] = [arrAllTabs[i].id];
 				} else {
-					arrWTabs = oTabs[arrAllTabs[i].windowId];
-					if (arrWTabs.length < oPrefs.maxTabs) {
-						arrWTabs.push(arrAllTabs[i].id);
-						oTabs[arrAllTabs[i].windowId] = arrWTabs;
-					}
+					arrWTabs = oTabs['global'];
+					arrWTabs.push(arrAllTabs[i].id);
+					oTabs['global'] = arrWTabs;
+				}
+				gCount++;
+			}
+			// Add to window-specific lists
+			if (!(arrAllTabs[i].windowId in oTabs)) {
+				oTabs[arrAllTabs[i].windowId] = [arrAllTabs[i].id];
+			} else {
+				arrWTabs = oTabs[arrAllTabs[i].windowId];
+				if (arrWTabs.length < oPrefs.maxTabs) {
+					arrWTabs.push(arrAllTabs[i].id);
+					oTabs[arrAllTabs[i].windowId] = arrWTabs;
 				}
 			}
 		}
@@ -76,34 +76,32 @@ function initObjects(){
 		browser.tabs.query({windowId: browser.windows.WINDOW_ID_CURRENT, active: true}).then((arrQTabs) => {
 			if (arrQTabs.length < 1) console.log('Error getting active tab in current window');
 			else {
-				if (oPrefs.blnIncludePrivate == true || arrQTabs[0].incognito === false){
-					var arrWTabs = oTabs['global'];
-					// Handle case of tabId in the existing list
-					var pos = arrWTabs.indexOf(arrQTabs[0].id);
-					if (pos > 0) { 
-						// remove from its old position
-						arrWTabs.splice(pos, 1);
-						// add to front
-						arrWTabs.unshift(arrQTabs[0].id);
-						// don't check length because we didn't change it
-						// store change
-						oTabs['global'] = arrWTabs;
-					} else if (pos == -1) {
-						// not in list, add to front
-						arrWTabs.unshift(arrQTabs[0].id);
-						// check length and trim off the last if too long
-						if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
-						// store change
-						oTabs['global'] = arrWTabs;
-					} else {
-						// this tab already is top-of-list so no action
-					}
-					//console.log('global-update => '+JSON.stringify(oTabs));
+				var arrWTabs = oTabs['global'];
+				// Handle case of tabId in the existing list
+				var pos = arrWTabs.indexOf(arrQTabs[0].id);
+				if (pos > 0) { 
+					// remove from its old position
+					arrWTabs.splice(pos, 1);
+					// add to front
+					arrWTabs.unshift(arrQTabs[0].id);
+					// don't check length because we didn't change it
+					// store change
+					oTabs['global'] = arrWTabs;
+				} else if (pos == -1) {
+					// not in list, add to front
+					arrWTabs.unshift(arrQTabs[0].id);
+					// check length and trim off the last if too long
+					if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
+					// store change
+					oTabs['global'] = arrWTabs;
+				} else {
+					// this tab already is top-of-list so no action
 				}
-
-				// Update toolbar button
-				setButton(arrQTabs[0].windowId);
+				//console.log('global-update => '+JSON.stringify(oTabs));
 			}
+
+			// Update toolbar button
+			setButton(arrQTabs[0].windowId);
 		})
 	}).then(function(){
 		// Populate oRecent
@@ -117,14 +115,57 @@ function initObjects(){
 initObjects();
 
 /**** Set up tab and window listeners to keep the data fresh ****/
+var blnIsPrivate = false;
 
 // Listen for tab activation and update oTabs
 browser.tabs.onActivated.addListener((info) => {
 	//console.log('Handling onActivated for id: '+info.tabId);
 	browser.tabs.get(info.tabId).then((currTab) => {
-		if (oPrefs.blnIncludePrivate == true || currTab.incognito === false){
-			// Update global tabIds array
-			var arrWTabs = oTabs['global'];
+		// Update private window status
+		if (currTab.incognito) blnIsPrivate = true;
+		else blnIsPrivate = false;
+		// Update global tabIds array
+		var arrWTabs = oTabs['global'];
+		//   Handle case of tabId in the existing list
+		var pos = arrWTabs.indexOf(info.tabId);
+		if (pos > 0) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// add to front
+			arrWTabs.unshift(info.tabId);
+			// don't check length because we didn't change it
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else if (pos == -1) {
+			// not in list, add to front
+			arrWTabs.unshift(info.tabId);
+			// check length and trim off the last if too long
+			if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else {
+			// active tab already is top-of-list so no action
+		}
+		// Update window-specific tabIds array
+		var arrWTabs = oTabs[info.windowId];
+		if (!arrWTabs) {
+			//   Handle case of new window, possibly a restored window with multiple tabs, so query it
+			browser.tabs.query({windowId: info.windowId}).then((foundtabs) => {
+				// Sort array of tab objects in descending order by lastAccessed (numeric)
+				foundtabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
+				for (i=0; i<foundtabs.length; i++){
+					if (!(foundtabs[i].windowId in oTabs)) {
+						oTabs[foundtabs[i].windowId] = [foundtabs[i].id];
+					} else {
+						arrWTabs = oTabs[foundtabs[i].windowId];
+						if (arrWTabs.length < oPrefs.maxTabs) {
+							arrWTabs.push(foundtabs[i].id);
+							oTabs[foundtabs[i].windowId] = arrWTabs;
+						}
+					}
+				}
+			});
+		} else {
 			//   Handle case of tabId in the existing list
 			var pos = arrWTabs.indexOf(info.tabId);
 			if (pos > 0) { 
@@ -134,69 +175,27 @@ browser.tabs.onActivated.addListener((info) => {
 				arrWTabs.unshift(info.tabId);
 				// don't check length because we didn't change it
 				// store change
-				oTabs['global'] = arrWTabs;
+				oTabs[info.windowId] = arrWTabs;
 			} else if (pos == -1) {
 				// not in list, add to front
 				arrWTabs.unshift(info.tabId);
 				// check length and trim off the last if too long
-				if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
+				if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
 				// store change
-				oTabs['global'] = arrWTabs;
+				oTabs[info.windowId] = arrWTabs;
 			} else {
 				// active tab already is top-of-list so no action
 			}
-			// Update window-specific tabIds array
-			var arrWTabs = oTabs[info.windowId];
-			if (!arrWTabs) {
-				//   Handle case of new window, possibly a restored window with multiple tabs, so query it
-				browser.tabs.query({windowId: info.windowId}).then((foundtabs) => {
-					// Sort array of tab objects in descending order by lastAccessed (numeric)
-					foundtabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
-					for (i=0; i<foundtabs.length; i++){
-						if (!(foundtabs[i].windowId in oTabs)) {
-							oTabs[foundtabs[i].windowId] = [foundtabs[i].id];
-						} else {
-							arrWTabs = oTabs[foundtabs[i].windowId];
-							if (arrWTabs.length < oPrefs.maxTabs) {
-								arrWTabs.push(foundtabs[i].id);
-								oTabs[foundtabs[i].windowId] = arrWTabs;
-							}
-						}
-					}
-				});
-			} else {
-				//   Handle case of tabId in the existing list
-				var pos = arrWTabs.indexOf(info.tabId);
-				if (pos > 0) { 
-					// remove from its old position
-					arrWTabs.splice(pos, 1);
-					// add to front
-					arrWTabs.unshift(info.tabId);
-					// don't check length because we didn't change it
-					// store change
-					oTabs[info.windowId] = arrWTabs;
-				} else if (pos == -1) {
-					// not in list, add to front
-					arrWTabs.unshift(info.tabId);
-					// check length and trim off the last if too long
-					if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
-					// store change
-					oTabs[info.windowId] = arrWTabs;
-				} else {
-					// active tab already is top-of-list so no action
-				}
-			}
-			//console.log('onActivated => '+JSON.stringify(oTabs));
-
-			// Update toolbar button
-			setButton(info.windowId);
-			
-			// Update Recents
-			updateRecent(info.tabId);
 		}
+		//console.log('onActivated => '+JSON.stringify(oTabs));
+
+		// Update toolbar button
+		setButton(info.windowId);
+		
+		// Update Recents
+		updateRecent(info.tabId);
 	}).catch((err) => {console.log('Promise rejected on tabs.get(): '+err.message);});
 });
-
 
 // Listen for tab removal and purge from oTabs
 browser.tabs.onRemoved.addListener((id, info) => {
@@ -252,38 +251,39 @@ browser.tabs.onDetached.addListener((id, info) => {
 	}
 	//  Add to new
 	browser.tabs.get(id).then((gotTab) => {
-		if (oPrefs.blnIncludePrivate == true || gotTab.incognito === false){
-			// Update window-specific tabIds array
-			var arrWTabs = oTabs[gotTab.windowId];
-			//   Handle case of new window (can't assume)
-			if (!arrWTabs) {
-				oTabs[gotTab.windowId] = [id];
-				arrWTabs = oTabs[gotTab.windowId];
-			}
-			//   Handle case of tabId in the existing list
-			var pos = arrWTabs.indexOf(id);
-			if (pos > 0) { 
-				// remove from its old position
-				arrWTabs.splice(pos, 1);
-				// add to front
-				arrWTabs.unshift(id);
-				// don't check length because we didn't change it
-				// store change
-				oTabs[gotTab.windowId] = arrWTabs;
-			} else if (pos == -1) {
-				// not in list, add to front
-				arrWTabs.unshift(id);
-				// check length and trim off the last if too long
-				if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
-				// store change
-				oTabs[gotTab.windowId] = arrWTabs;
-			} else {
-				// active tab already is top-of-list so no action
-			}
-			// Update toolbar button
-			setButton(gotTab.windowId);
-			//console.log('tab-detached: '+id+' => '+JSON.stringify(oTabs));
+		// Update private window status
+		if (gotTab.incognito) blnIsPrivate = true;
+		else blnIsPrivate = false;		
+		// Update window-specific tabIds array
+		var arrWTabs = oTabs[gotTab.windowId];
+		//   Handle case of new window (can't assume)
+		if (!arrWTabs) {
+			oTabs[gotTab.windowId] = [id];
+			arrWTabs = oTabs[gotTab.windowId];
 		}
+		//   Handle case of tabId in the existing list
+		var pos = arrWTabs.indexOf(id);
+		if (pos > 0) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// add to front
+			arrWTabs.unshift(id);
+			// don't check length because we didn't change it
+			// store change
+			oTabs[gotTab.windowId] = arrWTabs;
+		} else if (pos == -1) {
+			// not in list, add to front
+			arrWTabs.unshift(id);
+			// check length and trim off the last if too long
+			if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
+			// store change
+			oTabs[gotTab.windowId] = arrWTabs;
+		} else {
+			// active tab already is top-of-list so no action
+		}
+		// Update toolbar button
+		setButton(gotTab.windowId);
+		//console.log('tab-detached: '+id+' => '+JSON.stringify(oTabs));
 	});
 
 	// Update Recents
@@ -298,38 +298,39 @@ browser.tabs.onAttached.addListener((id, info) => {
 	// Update window-specific tabIds arrays
 	//  Add to new
 	browser.tabs.get(id).then((gotTab) => {
-		if (oPrefs.blnIncludePrivate == true || gotTab.incognito === false){
-			// Update window-specific tabIds array
-			var arrWTabs = oTabs[info.newWindowId];
-			//   Handle case of new window (can't assume)
-			if (!arrWTabs) {
-				oTabs[info.newWindowId] = [id];
-				arrWTabs = oTabs[info.newWindowId];
-			}
-			//   Handle case of tabId in the existing list
-			var pos = arrWTabs.indexOf(id);
-			if (pos > 0) { 
-				// remove from its old position
-				arrWTabs.splice(pos, 1);
-				// add to front
-				arrWTabs.unshift(id);
-				// don't check length because we didn't change it
-				// store change
-				oTabs[info.newWindowId] = arrWTabs;
-			} else if (pos == -1) {
-				// not in list, add to front
-				arrWTabs.unshift(id);
-				// check length and trim off the last if too long
-				if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
-				// store change
-				oTabs[info.newWindowId] = arrWTabs;
-			} else {
-				// active tab already is top-of-list so no action
-			}
-			// Update toolbar button
-			setButton(info.newWindowId);
-			//console.log('tab-attached: '+id+' => '+JSON.stringify(oTabs));
+		// Update private window status
+		if (gotTab.incognito) blnIsPrivate = true;
+		else blnIsPrivate = false;
+		// Update window-specific tabIds array
+		var arrWTabs = oTabs[info.newWindowId];
+		//   Handle case of new window (can't assume)
+		if (!arrWTabs) {
+			oTabs[info.newWindowId] = [id];
+			arrWTabs = oTabs[info.newWindowId];
 		}
+		//   Handle case of tabId in the existing list
+		var pos = arrWTabs.indexOf(id);
+		if (pos > 0) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// add to front
+			arrWTabs.unshift(id);
+			// don't check length because we didn't change it
+			// store change
+			oTabs[info.newWindowId] = arrWTabs;
+		} else if (pos == -1) {
+			// not in list, add to front
+			arrWTabs.unshift(id);
+			// check length and trim off the last if too long
+			if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
+			// store change
+			oTabs[info.newWindowId] = arrWTabs;
+		} else {
+			// active tab already is top-of-list so no action
+		}
+		// Update toolbar button
+		setButton(info.newWindowId);
+		//console.log('tab-attached: '+id+' => '+JSON.stringify(oTabs));
 	});
 
 	// Update Recents
@@ -352,36 +353,37 @@ browser.windows.onFocusChanged.addListener((wid) => {
 	//console.log('Handling onFocusChanged for wid: '+wid);
 	browser.tabs.query({active:true, windowId: wid}).then((foundtabs) => {
 		if (foundtabs.length < 1) return; // some weird window?
+		// Update private window status
+		if (foundtabs[0].incognito) blnIsPrivate = true;
+		else blnIsPrivate = false;
 		// Update toolbar button
 		setButton(wid);
-		if (oPrefs.blnIncludePrivate == true || foundtabs[0].incognito === false){
-			// Update globals
-			var arrWTabs = oTabs['global'];
-			// Handle case of tabId in the existing list
-			var pos = arrWTabs.indexOf(foundtabs[0].id);
-			if (pos > 0) { 
-				// remove from its old position
-				arrWTabs.splice(pos, 1);
-				// add to front
-				arrWTabs.unshift(foundtabs[0].id);
-				// don't check length because we didn't change it
-				// store change
-				oTabs['global'] = arrWTabs;
-			} else if (pos == -1) {
-				// not in list, add to front
-				arrWTabs.unshift(foundtabs[0].id);
-				// check length and trim off the last if too long
-				if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
-				// store change
-				oTabs['global'] = arrWTabs;
-			} else {
-				// this tab already is top-of-list so no action
-			}
-			//console.log('window-focused => '+JSON.stringify(oTabs));
-
-			// Update Recents
-			updateRecent(foundtabs[0].id);
+		// Update globals
+		var arrWTabs = oTabs['global'];
+		// Handle case of tabId in the existing list
+		var pos = arrWTabs.indexOf(foundtabs[0].id);
+		if (pos > 0) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// add to front
+			arrWTabs.unshift(foundtabs[0].id);
+			// don't check length because we didn't change it
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else if (pos == -1) {
+			// not in list, add to front
+			arrWTabs.unshift(foundtabs[0].id);
+			// check length and trim off the last if too long
+			if (arrWTabs.length > oPrefs.maxGlobal) arrWTabs.pop();
+			// store change
+			oTabs['global'] = arrWTabs;
+		} else {
+			// this tab already is top-of-list so no action
 		}
+		//console.log('window-focused => '+JSON.stringify(oTabs));
+
+		// Update Recents
+		updateRecent(foundtabs[0].id);
 	}).catch((err) => {console.log('Promise rejected on tabs.query(): '+err.message);});
 });
 
@@ -426,13 +428,22 @@ function doSwitch(oKey, wid){
 
 // Set icon image and tooltip based on ability to switch within current window
 function setButton(wid){
-	// TODO: dim icon in private windows if nonfunctional there
+	if (blnIsPrivate && oPrefs.blnIncludePrivate === false && oPrefs.blnButtonSwitches){
+		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setTitle({title: 'No Quick Switch in Private Window'});
+		return;
+	}
 	var arrWTabs = oTabs[wid];
-	if (!arrWTabs) return; // window focused but tab data not available yet
-	if (arrWTabs.length > 1) {
+	if (!arrWTabs){
+		// window focused but tab data not available yet; assume the worst
+		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'});			
+		return;
+	}
+	if (arrWTabs.length > 1 || (oPrefs.blnSameWindow === false && oTabs['global'].length > 1)) {
 		browser.browserAction.setIcon({path: 'icons/lasttab.png'});
 		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
-	} else if (oPrefs.blnSameWindow || oTabs['global'].length < 2) {
+	} else {
 		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
 		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'}); 
 	}
@@ -504,9 +515,9 @@ function updateRecent(tid){
 		oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 		oRecent[tid].title = currTab.title;
 		oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+		oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 		oRecent[tid].incog = currTab.incognito;
-		oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
-		//oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
+		oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[tid].icon;
 	});
 }
 
@@ -519,9 +530,9 @@ browser.tabs.onUpdated.addListener((tid, chgInfo, currTab) => {
 				oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 				oRecent[tid].title = currTab.title;
 				oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+				oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 				oRecent[tid].incog = currTab.incognito;
-				oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : 'icons/defaultFavicon.svg';
-				//oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
+				oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[tid].icon;
 			}
 		}
 	}
@@ -564,6 +575,11 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.sectionHeight = oSettings.sectionHeight;
 		browser.storage.local.set({prefs: oPrefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
+	} else if ("reinit" in request) {
+		if (request.reinit){
+			console.log('Flushing and rebuilding...');
+			initObjects();
+		}
 	}
 }
 browser.runtime.onMessage.addListener(handleMessage);
