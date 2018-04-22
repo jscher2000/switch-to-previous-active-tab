@@ -6,7 +6,8 @@
   Revision 0.6 - private windows excluded unless selected; handle detach/attach
   Revision 0.7 - popup list, add storage
   Revision 0.8 - refine popup behavior, color scheme/height options
-  Revision 0.9 - option to show site icons on the popup, rebuild button
+  Revision 0.9 - option to show site icons on the popup, rebuild button ERROR
+  Revision 1.0 - option to show site icons on the popup, rebuild button
 */
 
 /**** Create and populate data structure ****/
@@ -18,7 +19,7 @@ var oPrefs = {
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 	blnSameWindow: true,		// Button switches within same window vs. global
 	blnIncludePrivate: false,	// Include private window tabs
-	blnShowFavicons: true,		// Whether to show site icons on recents list
+	blnShowFavicons: false,		// Whether to show site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
 	blnDark: false,				// Toggle colors to bright-on-dark
 	sectionHeight: "490px"		// Height of list panel sections
