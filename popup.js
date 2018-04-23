@@ -1,6 +1,7 @@
 var oPrefs;
 var dNow = new Date(); 
 var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0);
+var oRecent = {};
 var reinitPrivate = false;
 var reinitFavicons = false;
 
@@ -65,7 +66,20 @@ function getSettings(){
 		}
 	}).catch((err) => {
 		console.log('Problem getting settings: '+err.message);
-		return {what: "damn"}; // do some defaults here
+		/* Use defaults? TODO: is this right to do here, or should it be before calling the API?
+		oPrefs = {
+			maxTabs: 30,				// maximum tabIds to store per window
+			maxGlobal: 60,				// maximum tabIds to store across all windows
+			popuptab: 1,				// default tab in popup.html
+			blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
+			blnSameWindow: true,		// Button switches within same window vs. global
+			blnIncludePrivate: false,	// Include private window tabs
+			blnShowFavicons: false,		// Whether to show site icons on recents list
+			blnKeepOpen: true,			// When switching in the same window, keep popup open
+			blnDark: false,				// Toggle colors to bright-on-dark
+			sectionHeight: "490px"		// Height of list panel sections
+		}
+		*/
 	});
 }
 
@@ -75,8 +89,7 @@ function getGlobal(blnClear){
 	}).then((oGlobal) => {
 		var dest = document.querySelector('#tabglobal ul');
 		if (blnClear) dest.innerHTML = '';
-		var arrWTabs = oGlobal.response.glist;
-		var oRecent = oGlobal.response.details;
+		var arrWTabs = oGlobal.glist;
 		for (var j=0; j<arrWTabs.length; j++){
 			if (arrWTabs[j] in oRecent){
 				if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
@@ -117,9 +130,8 @@ function getWindow(blnClear){
 		}).then((oWindow) => {
 			var dest = document.querySelector('#tabthiswin ul');
 			if (blnClear) dest.innerHTML = '';
-			var arrWTabs = oWindow.response.wlist;
+			var arrWTabs = oWindow.wlist;
 			if (arrWTabs){
-				var oRecent = oWindow.response.details;
 				for (var j=0; j<arrWTabs.length; j++){
 					if (arrWTabs[j] in oRecent){
 						if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){

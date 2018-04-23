@@ -8,12 +8,13 @@
   Revision 0.8 - refine popup behavior, color scheme/height options
   Revision 0.9 - option to show site icons on the popup, rebuild button ERROR
   Revision 1.0 - option to show site icons on the popup, rebuild button
+  Revision 1.1 - don't build oRecent until the list is requested
 */
 
 /**** Create and populate data structure ****/
 // Default starting values
 var oPrefs = {
-	maxTabs: 15,				// maximum tabIds to store per window
+	maxTabs: 30,				// maximum tabIds to store per window
 	maxGlobal: 60,				// maximum tabIds to store across all windows
 	popuptab: 1,				// default tab in popup.html
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
@@ -30,7 +31,6 @@ browser.storage.local.get("prefs").then((results) => {
 		if (JSON.stringify(results.prefs) != '{}'){
 			var arrSavedPrefs = Object.keys(results.prefs)
 			for (var j=0; j<arrSavedPrefs.length; j++){
-				//console.log(arrSavedPrefs[j] + ": " + results.prefs[arrSavedPrefs[j]]);
 				oPrefs[arrSavedPrefs[j]] = results.prefs[arrSavedPrefs[j]];
 			}
 		}
@@ -38,7 +38,6 @@ browser.storage.local.get("prefs").then((results) => {
 }).catch((err) => {console.log('Error retrieving storage: '+err.message);});
 
 var oTabs = {};			// store arrays of tabId's in descending order by lastAccessed
-var oRecent = {};		// store titles and URLs for MRU popup
 
 function initObjects(){
 	// Initialize oTabs object with up to maxTabs recent tabs per window
@@ -71,7 +70,6 @@ function initObjects(){
 				}
 			}
 		}
-		//console.log('initialized => '+JSON.stringify(oTabs));
 	}).then(function(){
 		// make current window's active tab the first in the global array if it isn't already
 		browser.tabs.query({windowId: browser.windows.WINDOW_ID_CURRENT, active: true}).then((arrQTabs) => {
@@ -98,18 +96,10 @@ function initObjects(){
 				} else {
 					// this tab already is top-of-list so no action
 				}
-				//console.log('global-update => '+JSON.stringify(oTabs));
 			}
-
 			// Update toolbar button
 			setButton(arrQTabs[0].windowId);
 		})
-	}).then(function(){
-		// Populate oRecent
-		var arrWTabs = oTabs['global'];
-		for (var j=0; j<arrWTabs.length; j++){
-			updateRecent(arrWTabs[j]);
-		}
 	});
 }
 
@@ -120,7 +110,6 @@ var blnIsPrivate = false;
 
 // Listen for tab activation and update oTabs
 browser.tabs.onActivated.addListener((info) => {
-	//console.log('Handling onActivated for id: '+info.tabId);
 	browser.tabs.get(info.tabId).then((currTab) => {
 		// Update private window status
 		if (currTab.incognito) blnIsPrivate = true;
@@ -188,19 +177,13 @@ browser.tabs.onActivated.addListener((info) => {
 				// active tab already is top-of-list so no action
 			}
 		}
-		//console.log('onActivated => '+JSON.stringify(oTabs));
-
 		// Update toolbar button
 		setButton(info.windowId);
-		
-		// Update Recents
-		updateRecent(info.tabId);
 	}).catch((err) => {console.log('Promise rejected on tabs.get(): '+err.message);});
 });
 
 // Listen for tab removal and purge from oTabs
 browser.tabs.onRemoved.addListener((id, info) => {
-	//console.log('Handling onRemoved for id: '+id);
 	// Update global tabIds array
 	var arrWTabs = oTabs['global'];
 	//   Handle case of tabId in the existing list
@@ -225,21 +208,14 @@ browser.tabs.onRemoved.addListener((id, info) => {
 			// store change
 			oTabs[info.windowId] = arrWTabs;
 		}
-		//console.log('onRemoved => '+JSON.stringify(oTabs));
-
 		// Update toolbar button
 		setButton(info.windowId);
 	}
-
-	// Update Recents
-	if (id in oRecent) delete oRecent[id];
 });
 
 // Listen for tab detach and update oTabs
 browser.tabs.onDetached.addListener((id, info) => {
-	//console.log('Handling onDetached for id: '+id);
 	// No update to global tabIds array?
-	
 	// Update window-specific tabIds arrays
 	//  Remove from old
 	var arrWTabs = oTabs[info.oldWindowId];
@@ -284,18 +260,12 @@ browser.tabs.onDetached.addListener((id, info) => {
 		}
 		// Update toolbar button
 		setButton(gotTab.windowId);
-		//console.log('tab-detached: '+id+' => '+JSON.stringify(oTabs));
 	});
-
-	// Update Recents
-	updateRecent(id);
 });
 
 // Listen for tab attach and update oTabs
 browser.tabs.onAttached.addListener((id, info) => {
-	//console.log('Handling onAttached for id: '+id);
 	// No update to global tabIds array?
-	
 	// Update window-specific tabIds arrays
 	//  Add to new
 	browser.tabs.get(id).then((gotTab) => {
@@ -331,27 +301,20 @@ browser.tabs.onAttached.addListener((id, info) => {
 		}
 		// Update toolbar button
 		setButton(info.newWindowId);
-		//console.log('tab-attached: '+id+' => '+JSON.stringify(oTabs));
 	});
-
-	// Update Recents
-	updateRecent(id);
 });
 
 
 // Listen for window close and purge from oTabs
 browser.windows.onRemoved.addListener((wid) => {
-	//console.log('Handling window.onRemoved for wid: '+wid);
 	// remove the whole array for this window
 	delete oTabs[wid];
 	// Update toolbar button
 	setButton(wid);
-	//console.log('window-removed: '+wid+' => '+JSON.stringify(oTabs));
 });
 
 // Updates globals and fix toolbar button for current (newly focused) window
 browser.windows.onFocusChanged.addListener((wid) => {
-	//console.log('Handling onFocusChanged for wid: '+wid);
 	browser.tabs.query({active:true, windowId: wid}).then((foundtabs) => {
 		if (foundtabs.length < 1) return; // some weird window?
 		// Update private window status
@@ -381,10 +344,6 @@ browser.windows.onFocusChanged.addListener((wid) => {
 		} else {
 			// this tab already is top-of-list so no action
 		}
-		//console.log('window-focused => '+JSON.stringify(oTabs));
-
-		// Update Recents
-		updateRecent(foundtabs[0].id);
 	}).catch((err) => {console.log('Promise rejected on tabs.query(): '+err.message);});
 });
 
@@ -503,52 +462,13 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 		}
 });
 
-/**** "Recent List" Functions ****/
-var dNow = new Date(); 
-var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0); 
-
-function updateRecent(tid){
-	// Populate oRecent for this tab (if necessary)
-	browser.tabs.get(tid).then((currTab) => {
-		if (!(tid in oRecent)){
-			oRecent[tid] = {"url":null, "title":null, "time":null};
-		}
-		oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-		oRecent[tid].title = currTab.title;
-		oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
-		oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
-		oRecent[tid].incog = currTab.incognito;
-		oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[tid].icon;
-	});
-}
-
-var recentIds = {};
-
-browser.tabs.onUpdated.addListener((tid, chgInfo, currTab) => {
-	if ('url' in chgInfo){
-		if (tid in oRecent){
-			if (oRecent[tid].url != currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '')){
-				oRecent[tid].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-				oRecent[tid].title = currTab.title;
-				oRecent[tid].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
-				oRecent[tid].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
-				oRecent[tid].incog = currTab.incognito;
-				oRecent[tid].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[tid].icon;
-			}
-		}
-	}
-});
-
 /**** MESSAGING ****/
 
 function handleMessage(request, sender, sendResponse) {
 	if ("want" in request) {
 		if (request.want == "global") {
-			var oGlobal = {};
-			oGlobal['glist'] = oTabs['global'];
-			oGlobal['details'] = oRecent;
 			sendResponse({
-				response: oGlobal
+				glist: oTabs['global']
 			});
 			return true;
 		} else if (request.want == "settings") {
@@ -556,11 +476,8 @@ function handleMessage(request, sender, sendResponse) {
 				response: oPrefs
 			})
 		} else {
-			var oWindow = {};
-			oWindow['wlist'] = oTabs[request.want];
-			oWindow['details'] = oRecent;
 			sendResponse({
-				response: oWindow
+				wlist: oTabs[request.want]
 			});
 			return true;
 		}
@@ -578,7 +495,6 @@ function handleMessage(request, sender, sendResponse) {
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 	} else if ("reinit" in request) {
 		if (request.reinit){
-			console.log('Flushing and rebuilding...');
 			initObjects();
 		}
 	}

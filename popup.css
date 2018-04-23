@@ -149,3 +149,7 @@ body.dark section ul li:nth-child(even){
 body.dark #panels > section {
 	background-color: #444;
 }
+body.dark img[src*="privateBrowsing.svg"] {
+	background-color: #ddd;
+	border-radius: 3px;
+}
