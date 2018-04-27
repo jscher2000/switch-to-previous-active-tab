@@ -9,6 +9,7 @@
   Revision 0.9 - option to show site icons on the popup, rebuild button ERROR
   Revision 1.0 - option to show site icons on the popup, rebuild button
   Revision 1.1 - don't build oRecent until the list is requested
+  Revision 1.2 - fix bug in popup.js
 */
 
 /**** Create and populate data structure ****/

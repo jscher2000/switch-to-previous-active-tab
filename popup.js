@@ -100,21 +100,20 @@ function getGlobal(blnClear){
 				}
 			} else {
 				browser.tabs.get(arrWTabs[j]).then((currTab) => {
-					if (!(arrWTabs[j] in oRecent)){
-						oRecent[arrWTabs[j]] = {"url":null, "title":null, "time":null};
+					if (!(currTab.id in oRecent)){
+						oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null};
 					}
-					oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-					oRecent[arrWTabs[j]].title = currTab.title;
-					oRecent[arrWTabs[j]].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
-					oRecent[arrWTabs[j]].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
-					oRecent[arrWTabs[j]].incog = currTab.incognito;
-					oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[arrWTabs[j]].icon;
-				}).then(function () {
-					if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-						dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
-						fixPath(oRecent[arrWTabs[j]]) + '">' + 
-						cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-						oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+					oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
+					oRecent[currTab.id].title = currTab.title;
+					oRecent[currTab.id].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+					oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
+					oRecent[currTab.id].incog = currTab.incognito;
+					oRecent[currTab.id].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[currTab.id].icon;
+					if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
+						dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '"><span><span><img style="width:16px;height:16px" src="' + 
+						fixPath(oRecent[currTab.id]) + '">' + 
+						cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
+						oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
 					}
 				});
 			}
@@ -142,21 +141,20 @@ function getWindow(blnClear){
 						}
 					} else {
 						browser.tabs.get(arrWTabs[j]).then((currTab) => {
-							if (!(arrWTabs[j] in oRecent)){
-								oRecent[arrWTabs[j]] = {"url":null, "title":null, "time":null};
+							if (!(currTab.id in oRecent)){
+								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null};
 							}
-							oRecent[arrWTabs[j]].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
-							oRecent[arrWTabs[j]].title = currTab.title;
-							oRecent[arrWTabs[j]].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
-							oRecent[arrWTabs[j]].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
-							oRecent[arrWTabs[j]].incog = currTab.incognito;
-							oRecent[arrWTabs[j]].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[arrWTabs[j]].icon;
-						}).then(function () {
-							if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-								dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
-								fixPath(oRecent[arrWTabs[j]]) + '">' + 
-								cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-								oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+							oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
+							oRecent[currTab.id].title = currTab.title;
+							oRecent[currTab.id].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
+							oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
+							oRecent[currTab.id].incog = currTab.incognito;
+							oRecent[currTab.id].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[currTab.id].icon;
+							if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
+								dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '"><span><span><img style="width:16px;height:16px" src="' + 
+								fixPath(oRecent[currTab.id]) + '">' + 
+								cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
+								oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
 							}
 						});
 					}
