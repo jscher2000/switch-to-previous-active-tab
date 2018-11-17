@@ -74,7 +74,7 @@ function getSettings(){
 			blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 			blnSameWindow: true,		// Button switches within same window vs. global
 			blnIncludePrivate: false,	// Include private window tabs
-			blnShowFavicons: false,		// Whether to show site icons on recents list
+			blnShowFavicons: false,		// Whether to retrieve site icons on recents list
 			blnKeepOpen: true,			// When switching in the same window, keep popup open
 			blnDark: false,				// Toggle colors to bright-on-dark
 			sectionHeight: "490px"		// Height of list panel sections
@@ -93,7 +93,7 @@ function getGlobal(blnClear){
 		for (var j=0; j<arrWTabs.length; j++){
 			if (arrWTabs[j] in oRecent){
 				if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '" incog="' + oRecent[arrWTabs[j]].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
 					fixPath(oRecent[arrWTabs[j]]) + '">' + 
 					cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
 					oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
@@ -108,9 +108,9 @@ function getGlobal(blnClear){
 					oRecent[currTab.id].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
 					oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 					oRecent[currTab.id].incog = currTab.incognito;
-					oRecent[currTab.id].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[currTab.id].icon;
+					oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 					if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
-						dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '"><span><span><img style="width:16px;height:16px" src="' + 
+						dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '" incog="' + oRecent[currTab.id].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
 						fixPath(oRecent[currTab.id]) + '">' + 
 						cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
 						oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
@@ -134,7 +134,7 @@ function getWindow(blnClear){
 				for (var j=0; j<arrWTabs.length; j++){
 					if (arrWTabs[j] in oRecent){
 						if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-							dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '"><span><span><img style="width:16px;height:16px" src="' + 
+							dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '" incog="' + oRecent[arrWTabs[j]].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
 							fixPath(oRecent[arrWTabs[j]]) + '">' + 
 							cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
 							oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
@@ -149,9 +149,9 @@ function getWindow(blnClear){
 							oRecent[currTab.id].time = (currTab.lastAccessed > dMidnight) ? new Date(currTab.lastAccessed).toLocaleTimeString() : new Date(currTab.lastAccessed).toLocaleDateString();
 							oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 							oRecent[currTab.id].incog = currTab.incognito;
-							oRecent[currTab.id].imgPath = (currTab.incognito) ? 'icons/privateBrowsing.svg' : oRecent[currTab.id].icon;
+							oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 							if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
-								dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '"><span><span><img style="width:16px;height:16px" src="' + 
+								dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '" incog="' + oRecent[currTab.id].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
 								fixPath(oRecent[currTab.id]) + '">' + 
 								cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
 								oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
@@ -172,6 +172,11 @@ function getWindow(blnClear){
 }
 
 function fixPath(tabdata){
+	// Firefox 63 saves a data URI instead of using the original URL
+	if (tabdata.icon.indexOf('data:image/png;base64,') == 0 || tabdata.icon.indexOf('data:image/x-icon;base64,') == 0){
+		return tabdata.imgPath;
+	}
+	// For Firefox 62 and earlier, or if the tab was never visited in Firefox 63
 	if (tabdata.incog){
 		return 'icons/privateBrowsing.svg';
 	} else if (tabdata.icon.indexOf('http://') == 0 || tabdata.icon.indexOf('https://') == 0){

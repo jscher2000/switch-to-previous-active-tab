@@ -24,7 +24,7 @@ nav ul li {
 	padding-top: 2px;
 	background-color: #ccc;
 	border-radius: 6px 6px 0 0;
-	border-bottom: 1px solid #aaa;
+	border: 1px solid #aaa;
 	font-weight: bold;
 	padding-bottom: 1px;
 	margin-bottom: -1px;
@@ -72,7 +72,7 @@ section ul li:nth-child(even){
 }
 section ul li:first-of-type {
 	cursor: unset;
-} 
+}
 section ul li > span:not(.right) {
 	position: absolute;
 	max-width: 530px;
@@ -105,6 +105,13 @@ section ul li > span.right {
 }
 section ul li > span.right > span {
 	font-size: 1em;
+}
+section ul li[incog="true"]  > span.right > span {
+	padding-left: 40px;
+	background-image: url("icons/privateBrowsing50.svg");
+	background-position: right;
+	background-repeat: no-repeat;
+	background-size: 42px;
 }
 #panels > section {
 	background-color: #f8f8f8;
@@ -152,4 +159,7 @@ body.dark #panels > section {
 body.dark img[src*="privateBrowsing.svg"] {
 	background-color: #ddd;
 	border-radius: 3px;
+}
+body.dark section ul li[incog="true"]  > span.right > span {
+	background-image: url("icons/privateBrowsingDark.svg");
 }

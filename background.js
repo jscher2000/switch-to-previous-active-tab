@@ -10,6 +10,7 @@
   Revision 1.0 - option to show site icons on the popup, rebuild button
   Revision 1.1 - don't build oRecent until the list is requested
   Revision 1.2 - fix bug in popup.js
+  Retrieve 1.3 - adapt to new site icon storage in Fx63
 */
 
 /**** Create and populate data structure ****/
@@ -21,7 +22,7 @@ var oPrefs = {
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 	blnSameWindow: true,		// Button switches within same window vs. global
 	blnIncludePrivate: false,	// Include private window tabs
-	blnShowFavicons: false,		// Whether to show site icons on recents list
+	blnShowFavicons: false,		// Whether to retrieve site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
 	blnDark: false,				// Toggle colors to bright-on-dark
 	sectionHeight: "490px"		// Height of list panel sections
