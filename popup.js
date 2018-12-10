@@ -60,6 +60,37 @@ function getSettings(){
 			if (document.querySelector('input[name="prefdark"]').hasAttribute('checked'))
 				document.querySelector('input[name="prefdark"]').removeAttribute('checked');
 		}
+		if (oPrefs.blnSansSerif){
+			document.body.style.setProperty('font-family', 'sans-serif', 'important');
+			document.querySelector('input[name="prefsans"]').setAttribute('checked', 'checked');
+		} else {
+			document.body.style.removeProperty('font-family');
+			if (document.querySelector('input[name="prefsans"]').hasAttribute('checked'))
+				document.querySelector('input[name="prefsans"]').removeAttribute('checked');
+		}
+		if (oPrefs.strFontSize){
+			document.body.style.setProperty('--body-size', oPrefs.strFontSize, 'important');
+			document.querySelector('option[value="' + oPrefs.strFontSize + '"]').setAttribute('selected', 'selected');
+		} else {
+			document.body.style.removeProperty('--body-size');
+			document.querySelector('option[value="14px"]').setAttribute('selected', 'selected');
+		}
+		if (oPrefs.blnBoldTitle){
+			document.body.style.setProperty('--title-weight', 'bold', 'important');
+			document.querySelector('input[name="prefboldtitle"]').setAttribute('checked', 'checked');
+		} else {
+			document.body.style.removeProperty('--title-weight');
+			if (document.querySelector('input[name="prefboldtitle"]').hasAttribute('checked'))
+				document.querySelector('input[name="prefboldtitle"]').removeAttribute('checked');
+		}
+		if (oPrefs.blnBoldURL){
+			document.body.style.setProperty('--url-weight', 'bold', 'important');
+			document.querySelector('input[name="prefboldurl"]').setAttribute('checked', 'checked');
+		} else {
+			document.body.style.removeProperty('--url-weight');
+			if (document.querySelector('input[name="prefboldurl"]').hasAttribute('checked'))
+				document.querySelector('input[name="prefboldurl"]').removeAttribute('checked');
+		}
 		if (oPrefs.sectionHeight){
 			setHeight(oPrefs.sectionHeight);
 			document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
@@ -250,6 +281,10 @@ document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
 document.querySelector('#btnSave').addEventListener('click', updatePrefs, false);
 document.querySelector('#btnReset').addEventListener('click', clearForm, false);
 document.querySelector('input[name="prefdark"]').addEventListener('click', updateDarkmode, false);
+document.querySelector('input[name="prefsans"]').addEventListener('click', updatefont, false);
+document.querySelector('select[name="fontsize"]').addEventListener('change', updatefont, false);
+document.querySelector('input[name="prefboldtitle"]').addEventListener('click', updateweightvar, false);
+document.querySelector('input[name="prefboldurl"]').addEventListener('click', updateweightvar, false);
 document.querySelector('input[name="prefheight"]').addEventListener('change', setHeight, false);
 document.querySelector('#height490').addEventListener('click', revertHeight, false);
 document.querySelector('#btnReinit').addEventListener('click', doReinit, false);
@@ -278,6 +313,13 @@ function updatePrefs(evt){
 	else oPrefs.blnKeepOpen = false;
 	if (document.querySelector('input[name="prefdark"]').checked) oPrefs.blnDark = true;
 	else oPrefs.blnDark = false;
+	if (document.querySelector('input[name="prefsans"]').checked) oPrefs.blnSansSerif = true;
+	else oPrefs.blnSansSerif = false;
+	oPrefs.strFontSize = document.querySelector('select[name="fontsize"]').value;
+	if (document.querySelector('input[name="prefboldtitle"]').checked) oPrefs.blnBoldTitle = true;
+	else oPrefs.blnBoldTitle = false;
+	if (document.querySelector('input[name="prefboldurl"]').checked) oPrefs.blnBoldURL = true;
+	else oPrefs.blnBoldURL = false;
 	var intHeight = document.querySelector('input[name="prefheight"]').value;
 	if (intHeight >= 300 && intHeight <= 1000){
 		oPrefs.sectionHeight = '' + intHeight + 'px';
@@ -304,6 +346,36 @@ function updateDarkmode(evt){
 		document.body.className = 'dark';
 	} else {
 		document.body.className = '';
+	}
+}
+function updateweightvar(evt){
+	if (evt && evt.target) var chk = evt.target;
+	if (chk.getAttribute('name') == 'prefboldtitle'){
+		if (chk.checked){
+			document.body.style.setProperty('--title-weight', 'bold', 'important');
+		} else {
+			document.body.style.removeProperty('--title-weight');
+		}
+	}
+	if (chk.getAttribute('name') == 'prefboldurl'){
+		if (chk.checked){
+			document.body.style.setProperty('--url-weight', 'bold', 'important');
+		} else {
+			document.body.style.removeProperty('--url-weight');
+		}
+	}
+}
+function updatefont(evt){
+	if (evt && evt.target) var tgt = evt.target;
+	if (tgt.getAttribute('name') == 'fontsize'){
+		document.body.style.setProperty('--body-size', tgt.value, 'important');
+	}
+	if (tgt.getAttribute('name') == 'prefsans'){
+		if (tgt.checked){
+			document.body.style.setProperty('font-family', 'sans-serif', 'important');
+		} else {
+			document.body.style.removeProperty('font-family');
+		}
 	}
 }
 function setHeight(inp){

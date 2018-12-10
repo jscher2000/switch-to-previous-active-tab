@@ -10,7 +10,8 @@
   Revision 1.0 - option to show site icons on the popup, rebuild button
   Revision 1.1 - don't build oRecent until the list is requested
   Revision 1.2 - fix bug in popup.js
-  Retrieve 1.3 - adapt to new site icon storage in Fx63
+  Revision 1.3 - adapt to new site icon storage in Fx63
+  Revision 1.4 - more appearance options: sans-serif font, font-size, bold title, bold URL
 */
 
 /**** Create and populate data structure ****/
@@ -25,6 +26,10 @@ var oPrefs = {
 	blnShowFavicons: false,		// Whether to retrieve site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
 	blnDark: false,				// Toggle colors to bright-on-dark
+	blnSansSerif: false,		// Whether to use the default sans-serif font
+	strFontSize: "14px",		// Default font size for popup
+	blnBoldTitle: false,		// Whether to bold the window title
+	blnBoldURL: false,			// Whether to bold the page URL
 	sectionHeight: "490px"		// Height of list panel sections
 }
 // Update oPrefs from storage
@@ -492,6 +497,10 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.blnShowFavicons = oSettings.blnShowFavicons;
 		oPrefs.blnKeepOpen = oSettings.blnKeepOpen;
 		oPrefs.blnDark = oSettings.blnDark;
+		oPrefs.blnSansSerif = oSettings.blnSansSerif;
+		oPrefs.strFontSize = oSettings.strFontSize;
+		oPrefs.blnBoldTitle = oSettings.blnBoldTitle;
+		oPrefs.blnBoldURL = oSettings.blnBoldURL;
 		oPrefs.sectionHeight = oSettings.sectionHeight;
 		browser.storage.local.set({prefs: oPrefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});

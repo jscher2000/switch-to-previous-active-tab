@@ -29,13 +29,25 @@
 					<td style="width: 50%">
 						<p>Button Action:</p>
 						<p><label><input type="radio" name="buttonaction" value="bswitch" checked> Switch tabs</label> <label><input type="radio" name="buttonaction" value="blist"> Show list</label></p>
-						<p>Scope of Action:</p>
+						<p>Scope of Button Action:</p>
 						<p><label><input type="radio" name="actionscope" value="swin" checked> Current window</label> <label><input type="radio" name="actionscope" value="sglob"> Global</label></p>
 					</td>
 					<td style="width: 50%">
 						<p>Popup Panel:</p>
 						<p><label><input type="checkbox" name="prefkeepopen" checked> Keep open in same window</label><br>
-						<label><input type="checkbox" name="prefdark"> Dark color scheme</label></p>
+						<label><input type="checkbox" name="prefdark"> Dark color scheme</label><br>
+						<label><input type="checkbox" name="prefsans"> Use my sans-serif font</label><br>
+						Font size: <select name="fontsize">
+							<option value="13px">12px</option>
+							<option value="13px">13px</option>
+							<option value="14px">14px (default)</option>
+							<option value="15px">15px</option>
+							<option value="16px">16px</option>
+							<option value="17px">17px</option>
+							<option value="18px">18px</option>
+						</select><br>
+						<label><input type="checkbox" name="prefboldtitle"> Bold title</label> 
+						<label><input type="checkbox" name="prefboldurl"> Bold URL</label></p>
 						<p>List area height: <input type="number" name="prefheight" step="5" value="490" min="300" max="900" style="width: 45px; transform: scale(2) translateY(-2px); margin-left: 30px; padding-top: 0; padding-bottom: 0;"> <button id="height490" title="Default height" style="transform: translateX(30px)">490</button><br>
 						(accepts 300-900 in steps of 5)</p>
 					</td>

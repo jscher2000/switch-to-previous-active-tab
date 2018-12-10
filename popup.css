@@ -1,7 +1,10 @@
 body {
 	padding: 6px 4px 16px 0;
 	background-color: #eee;
-	font-size: 14px;
+	--body-size: 14px;
+	font-size: var(--body-size);
+	--title-weight: normal;
+	--url-weight: normal;
 }
 /* Tabs */
 nav {
@@ -26,7 +29,7 @@ nav ul li {
 	border-radius: 6px 6px 0 0;
 	border: 1px solid #aaa;
 	font-weight: bold;
-	padding-bottom: 1px;
+	padding-bottom: 3px;
 	margin-bottom: -1px;
 }
 nav ul li:first-of-type {
@@ -61,9 +64,9 @@ section ul {
 }
 section ul li {
 	position: relative;
-	height: 49px;
+	height: 3.5em;
 	width: 100%;
-	padding: 2px 6px;
+	padding: 3px 6px 2px;
 	background-color: #f8f8f8;
 	cursor: pointer;
 }
@@ -87,10 +90,12 @@ section ul li > span > span {
 	text-overflow: ellipsis;
 }
 section ul li > span > span:first-of-type {
-	font-size: 16px;
+	font-size: 1.15em;
+	font-weight: var(--title-weight);
 }
 section ul li > span > span:nth-of-type(2) {
 	margin-top: -3px;
+	font-weight: var(--url-weight);
 }
 section ul li > span > span > img {
 	margin-right: 4px;
@@ -101,7 +106,7 @@ section ul li > span.right {
 	position: absolute;
 	width: calc(100% - 12px);
 	text-align: right;
-	font-size: 16px;
+	font-size: 1.15em;
 }
 section ul li > span.right > span {
 	font-size: 1em;
@@ -119,10 +124,10 @@ section ul li[incog="true"]  > span.right > span {
 }
 #frmOpts td {
 	vertical-align: top;
-	padding: 0 24px;
+	padding: 0 16px;
 }
 #frmOpts p {
-	font-size: 16px;
+	font-size: 1.15em;
 	margin-top: 0.75em;
 	margin-bottom: 0;
 }
@@ -135,7 +140,7 @@ section ul li[incog="true"]  > span.right > span {
 
 body.dark {
 	background-color: #000;
-	color: #f8f8f8;
+	color: #eee;
 }
 body.dark nav ul li {
 	background-color: #333;
