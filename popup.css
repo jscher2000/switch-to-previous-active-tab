@@ -122,17 +122,27 @@ section ul li[incog="true"]  > span.right > span {
 	background-color: #f8f8f8;
 	display: none;
 }
-#frmOpts td {
+#frmOpts td, #frmReload td {
 	vertical-align: top;
 	padding: 0 16px;
 }
-#frmOpts p {
+#frmOpts p, #frmReload p {
 	font-size: 1.15em;
 	margin-top: 0.75em;
 	margin-bottom: 0;
 }
-#frmOpts tr:first-of-type td p:first-of-type {
+#frmOpts tr:first-of-type td p:first-of-type,
+#frmReload tr:first-of-type td p:first-of-type {
 	margin-top: 1em;
+}
+#frmReload select {
+	width: 300px;
+	font-family: sans-serif;
+	font-size: 1em;
+}
+#reloadplaying {
+	padding: 8px 16px;
+	background-color: #ffd;
 }
 .controldisabled {
 	color: #aaa;

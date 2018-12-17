@@ -1,4 +1,4 @@
-var oPrefs;
+var oPrefs, oRATprefs;
 var dNow = new Date(); 
 var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0);
 var oRecent = {};
@@ -10,91 +10,14 @@ function getSettings(){
 		want: "settings"
 	}).then((oSettings) => {
 		oPrefs = oSettings.response;
+		oRATprefs = oSettings.RAT;		
 		// Change tabs if needed
 		if (oPrefs.popuptab != 1){
 			panelSwitch(document.querySelectorAll('nav ul li')[oPrefs.popuptab]);
 		}
 		// Set up form defaults
-		if (oPrefs.blnButtonSwitches){
-			document.querySelector('input[value="bswitch"]').setAttribute('checked', 'checked');
-			if (document.querySelector('input[value="blist"]').hasAttribute('checked'))
-				document.querySelector('input[value="blist"]').removeAttribute('checked');
-		} else {
-			document.querySelector('input[value="blist"]').setAttribute('checked', 'checked');
-			if (document.querySelector('input[value="bswitch"]').hasAttribute('checked'))
-				document.querySelector('input[value="bswitch"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnSameWindow){
-			document.querySelector('input[value="swin"]').setAttribute('checked', 'checked');
-			if (document.querySelector('input[value="sglob"]').hasAttribute('checked'))
-				document.querySelector('input[value="sglob"]').removeAttribute('checked');
-		} else {
-			document.querySelector('input[value="sglob"]').setAttribute('checked', 'checked');
-			if (document.querySelector('input[value="swin"]').hasAttribute('checked'))
-				document.querySelector('input[value="swin"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnIncludePrivate){
-			document.querySelector('input[name="prefprivate"]').setAttribute('checked', 'checked');
-		} else {
-			if (document.querySelector('input[name="prefprivate"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefprivate"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnShowFavicons){
-			document.querySelector('input[name="preficons"]').setAttribute('checked', 'checked');
-		} else {
-			if (document.querySelector('input[name="preficons"]').hasAttribute('checked'))
-				document.querySelector('input[name="preficons"]').removeAttribute('checked');
-		}
-		// Appearance adjustments
-		if (oPrefs.blnKeepOpen){
-			document.querySelector('input[name="prefkeepopen"]').setAttribute('checked', 'checked');
-		} else {
-			if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnDark){
-			document.body.className = 'dark';
-			document.querySelector('input[name="prefdark"]').setAttribute('checked', 'checked');
-		} else {
-			document.body.className = '';
-			if (document.querySelector('input[name="prefdark"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefdark"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnSansSerif){
-			document.body.style.setProperty('font-family', 'sans-serif', 'important');
-			document.querySelector('input[name="prefsans"]').setAttribute('checked', 'checked');
-		} else {
-			document.body.style.removeProperty('font-family');
-			if (document.querySelector('input[name="prefsans"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefsans"]').removeAttribute('checked');
-		}
-		if (oPrefs.strFontSize){
-			document.body.style.setProperty('--body-size', oPrefs.strFontSize, 'important');
-			document.querySelector('option[value="' + oPrefs.strFontSize + '"]').setAttribute('selected', 'selected');
-		} else {
-			document.body.style.removeProperty('--body-size');
-			document.querySelector('option[value="14px"]').setAttribute('selected', 'selected');
-		}
-		if (oPrefs.blnBoldTitle){
-			document.body.style.setProperty('--title-weight', 'bold', 'important');
-			document.querySelector('input[name="prefboldtitle"]').setAttribute('checked', 'checked');
-		} else {
-			document.body.style.removeProperty('--title-weight');
-			if (document.querySelector('input[name="prefboldtitle"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefboldtitle"]').removeAttribute('checked');
-		}
-		if (oPrefs.blnBoldURL){
-			document.body.style.setProperty('--url-weight', 'bold', 'important');
-			document.querySelector('input[name="prefboldurl"]').setAttribute('checked', 'checked');
-		} else {
-			document.body.style.removeProperty('--url-weight');
-			if (document.querySelector('input[name="prefboldurl"]').hasAttribute('checked'))
-				document.querySelector('input[name="prefboldurl"]').removeAttribute('checked');
-		}
-		if (oPrefs.sectionHeight){
-			setHeight(oPrefs.sectionHeight);
-			document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
-		}
+		setFormControls();
+		setRATFormControls();
 	}).catch((err) => {
 		console.log('Problem getting settings: '+err.message);
 		/* Use defaults? TODO: is this right to do here, or should it be before calling the API?
@@ -114,6 +37,126 @@ function getSettings(){
 	});
 }
 
+function setFormControls(){
+	if (oPrefs.blnButtonSwitches){
+		document.querySelector('input[value="bswitch"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="blist"]').hasAttribute('checked'))
+			document.querySelector('input[value="blist"]').removeAttribute('checked');
+	} else {
+		document.querySelector('input[value="blist"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="bswitch"]').hasAttribute('checked'))
+			document.querySelector('input[value="bswitch"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnSameWindow){
+		document.querySelector('input[value="swin"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="sglob"]').hasAttribute('checked'))
+			document.querySelector('input[value="sglob"]').removeAttribute('checked');
+	} else {
+		document.querySelector('input[value="sglob"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="swin"]').hasAttribute('checked'))
+			document.querySelector('input[value="swin"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnIncludePrivate){
+		document.querySelector('input[name="prefprivate"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefprivate"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefprivate"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnShowFavicons){
+		document.querySelector('input[name="preficons"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="preficons"]').hasAttribute('checked'))
+			document.querySelector('input[name="preficons"]').removeAttribute('checked');
+	}
+	// Appearance adjustments
+	if (oPrefs.blnKeepOpen){
+		document.querySelector('input[name="prefkeepopen"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnDark){
+		document.body.className = 'dark';
+		document.querySelector('input[name="prefdark"]').setAttribute('checked', 'checked');
+	} else {
+		document.body.className = '';
+		if (document.querySelector('input[name="prefdark"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefdark"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnSansSerif){
+		document.body.style.setProperty('font-family', 'sans-serif', 'important');
+		document.querySelector('input[name="prefsans"]').setAttribute('checked', 'checked');
+	} else {
+		document.body.style.removeProperty('font-family');
+		if (document.querySelector('input[name="prefsans"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefsans"]').removeAttribute('checked');
+	}
+	if (oPrefs.strFontSize){
+		document.body.style.setProperty('--body-size', oPrefs.strFontSize, 'important');
+		document.querySelector('option[value="' + oPrefs.strFontSize + '"]').setAttribute('selected', 'selected');
+	} else {
+		document.body.style.removeProperty('--body-size');
+		document.querySelector('option[value="14px"]').setAttribute('selected', 'selected');
+	}
+	if (oPrefs.blnBoldTitle){
+		document.body.style.setProperty('--title-weight', 'bold', 'important');
+		document.querySelector('input[name="prefboldtitle"]').setAttribute('checked', 'checked');
+	} else {
+		document.body.style.removeProperty('--title-weight');
+		if (document.querySelector('input[name="prefboldtitle"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefboldtitle"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnBoldURL){
+		document.body.style.setProperty('--url-weight', 'bold', 'important');
+		document.querySelector('input[name="prefboldurl"]').setAttribute('checked', 'checked');
+	} else {
+		document.body.style.removeProperty('--url-weight');
+		if (document.querySelector('input[name="prefboldurl"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefboldurl"]').removeAttribute('checked');
+	}
+	if (oPrefs.sectionHeight){
+		setHeight(oPrefs.sectionHeight);
+		document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
+	}
+}
+function setRATFormControls(){
+	if (oRATprefs.RATactive == true){
+		document.querySelector('#selReloActive').selectedIndex = 0;
+	} else {
+		document.querySelector('#selReloActive').selectedIndex = 1;
+	}
+	if (oRATprefs.RATpinned == true){
+		document.querySelector('#selReloPinned').selectedIndex = 0;
+	} else {
+		document.querySelector('#selReloPinned').selectedIndex = 1;
+	}
+	if (oRATprefs.RATdiscarded == true){
+		document.querySelector('#selReloDiscarded').selectedIndex = 0;
+	} else {
+		document.querySelector('#selReloDiscarded').selectedIndex = 1;
+	}
+	if (oRATprefs.RATbypasscache == true){
+		document.querySelector('#selReloBypass').selectedIndex = 1;
+	} else {
+		document.querySelector('#selReloBypass').selectedIndex = 0;
+	}
+	switch (oRATprefs.RATplaying){
+		case 'reload':
+			document.querySelector('#selReloAudible').selectedIndex = 1;
+			break;
+		case 'ask':
+			document.querySelector('#selReloAudible').selectedIndex = 2;
+			break;
+		default:
+			// no change
+	}
+	if (oRATprefs.RATsequential !== true){
+		document.querySelector('#selReloSeq').selectedIndex = document.querySelector('#selReloSeq').options.length - 1;
+	} else {
+		document.querySelector('#selReloSeq').selectedIndex = oRATprefs.RATseqnum - 1;
+	}
+}
+
 function getGlobal(blnClear){
 	browser.runtime.sendMessage({
 		want: "global"
@@ -124,10 +167,7 @@ function getGlobal(blnClear){
 		for (var j=0; j<arrWTabs.length; j++){
 			if (arrWTabs[j] in oRecent){
 				if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-					dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '" incog="' + oRecent[arrWTabs[j]].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
-					fixPath(oRecent[arrWTabs[j]]) + '">' + 
-					cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-					oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+					addListItem(arrWTabs[j], dest);
 				}
 			} else {
 				browser.tabs.get(arrWTabs[j]).then((currTab) => {
@@ -141,10 +181,7 @@ function getGlobal(blnClear){
 					oRecent[currTab.id].incog = currTab.incognito;
 					oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 					if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
-						dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '" incog="' + oRecent[currTab.id].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
-						fixPath(oRecent[currTab.id]) + '">' + 
-						cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
-						oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
+						addListItem(currTab.id, dest);
 					}
 				});
 			}
@@ -165,10 +202,7 @@ function getWindow(blnClear){
 				for (var j=0; j<arrWTabs.length; j++){
 					if (arrWTabs[j] in oRecent){
 						if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
-							dest.insertAdjacentHTML('beforeend', '<li id="' + arrWTabs[j] + '" incog="' + oRecent[arrWTabs[j]].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
-							fixPath(oRecent[arrWTabs[j]]) + '">' + 
-							cleanse(oRecent[arrWTabs[j]].title) + '</span><br><span>' + oRecent[arrWTabs[j]].url + '</span></span><span class="right">' + 
-							oRecent[arrWTabs[j]].time + '<br><span>&nbsp;</span></span></li>\n');
+							addListItem(arrWTabs[j], dest);
 						}
 					} else {
 						browser.tabs.get(arrWTabs[j]).then((currTab) => {
@@ -182,10 +216,7 @@ function getWindow(blnClear){
 							oRecent[currTab.id].incog = currTab.incognito;
 							oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 							if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
-								dest.insertAdjacentHTML('beforeend', '<li id="' + currTab.id + '" incog="' + oRecent[currTab.id].incog + '"><span><span><img style="width:16px;height:16px" src="' + 
-								fixPath(oRecent[currTab.id]) + '">' + 
-								cleanse(oRecent[currTab.id].title) + '</span><br><span>' + oRecent[currTab.id].url + '</span></span><span class="right">' + 
-								oRecent[currTab.id].time + '<br><span>&nbsp;</span></span></li>\n');
+								addListItem(currTab.id, dest);
 							}
 						});
 					}
@@ -223,6 +254,24 @@ function fixPath(tabdata){
 	}
 }
 
+function addListItem(onetab, list){
+	var newLI = document.getElementById('newLI');
+	var clone = document.importNode(newLI.content, true);
+	// Populate the template
+	var elTemp = clone.querySelector('li');
+	elTemp.id = onetab;
+	elTemp.setAttribute('incog', oRecent[onetab].incog);
+	elTemp = clone.querySelector('span > span > img');
+	elTemp.setAttribute('src', fixPath(oRecent[onetab]));
+	elTemp = clone.querySelectorAll('span > span');
+	elTemp[0].appendChild(document.createTextNode(oRecent[onetab].title));
+	elTemp[1].appendChild(document.createTextNode(oRecent[onetab].url));
+	elTemp = clone.querySelector('span.right');
+	elTemp.insertBefore(document.createTextNode(oRecent[onetab].time), elTemp.firstChild);
+	// Add the item to the list
+	list.appendChild(clone);
+}
+
 /**** Event handlers ****/
 
 function panelClick(evt){
@@ -246,10 +295,10 @@ function panelSwitch(tab){
 
 function gotoTab(evt){
 	var tgt = evt.target;
-	while (tgt.nodeName != "LI"){
-		tgt = tgt.parentNode;
-		if (tgt.nodeName == "UL"){
-			console.log('Reached UL!');
+	if (tgt.nodeName != "LI"){
+		tgt = tgt.closest('li');
+		if (!tgt){
+			console.log('Error finding LI');
 			return;
 		}
 	}
@@ -264,7 +313,7 @@ function gotoTab(evt){
 					self.close();
 				}
 			} else {
-				// Change window, close panel
+				// Change window, close panel => BUGGY, FOCUS SHIFTS TO BG WINDOW?
 				browser.windows.update(newTab.windowId, {focused: true});
 				self.close();
 			}
@@ -288,6 +337,8 @@ document.querySelector('input[name="prefboldurl"]').addEventListener('click', up
 document.querySelector('input[name="prefheight"]').addEventListener('change', setHeight, false);
 document.querySelector('#height490').addEventListener('click', revertHeight, false);
 document.querySelector('#btnReinit').addEventListener('click', doReinit, false);
+document.querySelector('#btnReloSave').addEventListener('click', updateRATPrefs, false);
+document.querySelector('#btnReloReset').addEventListener('click', setRATFormControls, false);
 
 function updatePrefs(evt){
 	// Update oPrefs
@@ -403,6 +454,7 @@ function revertHeight(evt){
 	setHeight('490px');
 }
 function clearForm(evt){
+	// BUG: triggers a change of tab in some cases (private mode settings)
 	document.getElementById('frmOpts').reset();
 	updateDarkmode(null);
 	document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
@@ -415,4 +467,27 @@ function doReinit(evt){
 		});
 		self.close();
 	}
+}
+function updateRATPrefs(evt){
+	// update oRATprefs
+	if (document.querySelector('#selReloActive').value == "true") oRATprefs.RATactive = true;
+	else oRATprefs.RATactive = false;
+	if (document.querySelector('#selReloPinned').value == "true") oRATprefs.RATpinned = true;
+	else oRATprefs.RATpinned = false;
+	if (document.querySelector('#selReloDiscarded').value == "true") oRATprefs.RATdiscarded = true;
+	else oRATprefs.RATdiscarded = false;
+	if (document.querySelector('#selReloBypass').value == "true") oRATprefs.RATbypasscache = true;
+	else oRATprefs.RATbypasscache = false;
+	oRATprefs.RATplaying = document.querySelector('#selReloAudible').value;
+	if (document.querySelector('#selReloSeq').value == "all") oRATprefs.RATsequential = false;
+	else {
+		oRATprefs.RATsequential = true;
+		oRATprefs.RATseqnum = document.querySelector('#selReloSeq').value;
+	}
+	// send to background script
+	browser.runtime.sendMessage({
+		updateRAT: oRATprefs
+	});
+	// cancel form submit
+	return false;
 }

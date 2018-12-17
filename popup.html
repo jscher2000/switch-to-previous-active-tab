@@ -11,6 +11,7 @@
 		<li id="twin" panel="tabthiswin">Window</li>
 		<li id="tall" panel="tabglobal" class="vis">Global</li>
 		<li id="topt" panel="taboptions">Options</li>
+		<li id="trel" panel="tabreload">Reload Tabs</li>
 	</ul>
 </nav>
 <div id="panels">
@@ -38,7 +39,7 @@
 						<label><input type="checkbox" name="prefdark"> Dark color scheme</label><br>
 						<label><input type="checkbox" name="prefsans"> Use my sans-serif font</label><br>
 						Font size: <select name="fontsize">
-							<option value="13px">12px</option>
+							<option value="12px">12px</option>
 							<option value="13px">13px</option>
 							<option value="14px">14px (default)</option>
 							<option value="15px">15px</option>
@@ -63,7 +64,98 @@
 			</tbody></table>
 		</form>
 	</section>
+	<section id="tabreload">
+		<div id="reloadplaying" style="display: none">
+			<p>Reload currently playing tab(s)? <button id="reloyes">Yes</button> <button id="relono">No</button></p>
+		</div>
+		<form id="frmReload" name="frmReload" action="#">
+			<table border="0" cellspacing="0" cellpadding="0" style="width: 100%"><tbody>
+				<tr>
+					<td colspan="2">
+						<p style="border-bottom: 1px solid #888; padding-bottom:0.75em; font-weight: bold">Default behavior for "&#x1F504; Reload All Tabs" menu command</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Reload current tab:</p>
+					</td>
+					<td>
+						<p><select id="selReloActive">
+								<option value="true" selected>Yes</option>
+								<option value="false">No, other tabs only</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Reload pinned tabs:</p>
+					</td>
+					<td>
+						<p><select id="selReloPinned">
+								<option value="true" selected>Yes</option>
+								<option value="false">No, only regular tabs</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Reload pending/discarded tabs:</p>
+					</td>
+					<td>
+						<p><select id="selReloDiscarded">
+								<option value="true" selected>Yes</option>
+								<option value="false">No, only current tabs</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Reload normally, using cached files:</p>
+					</td>
+					<td>
+						<p><select id="selReloBypass">
+								<option value="false" selected>Yes (Shift+click to bypass cache)</option>
+								<option value="true">No, always bypass cache</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Reload tabs currently playing media:</p>
+					</td>
+					<td>
+						<p><select id="selReloAudible">
+								<option value="skip" selected>No, leave them alone</option>
+								<option value="reload">Yes, reload them</option>
+								<option value="ask">Ask me every time (TODO - currently = No)</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Tabs to reload simultaneously:</p>
+					</td>
+					<td>
+						<p><select id="selReloSeq">
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3" selected>3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="all">All of them</option>
+							</select></p>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						<p style="border-top: 1px solid #888; padding-top:0.75em; text-align: center"><button id="btnReloSave">Save Settings</button> <button id="btnReloReset">Clear Changes</button></p>
+					</td>
+				</tr>
+			</tbody></table>
+		</form>
+	</section>
 </div>
 </body>
 <script type="text/javascript" src="popup.js"></script>
+<template id="newLI"><li id="" incog=""><span><span><img style="width:16px;height:16px" src="iconsrc"></span><br><span></span></span><span class="right"><br><span>&nbsp;</span></span></li></template>
 </html>
