@@ -32,9 +32,11 @@
 						<p><label><input type="radio" name="buttonaction" value="bswitch" checked> Switch tabs</label> <label><input type="radio" name="buttonaction" value="blist"> Show list</label></p>
 						<p>Scope of Button Action:</p>
 						<p><label><input type="radio" name="actionscope" value="swin" checked> Current window</label> <label><input type="radio" name="actionscope" value="sglob"> Global</label></p>
+						<p>Show URLs in List:</p>
+						<p><label><input type="radio" name="listurl" value="showurl" checked> Separate line</label> <label><input type="radio" name="listurl" value="hideurl"> Hover tooltip</label></p>
 					</td>
 					<td style="width: 50%">
-						<p>Popup Panel:</p>
+						<p>Popup Panel Styling:</p>
 						<p><label><input type="checkbox" name="prefkeepopen" checked> Keep open in same window</label><br>
 						<label><input type="checkbox" name="prefdark"> Dark color scheme</label><br>
 						<label><input type="checkbox" name="prefsans"> Use my sans-serif font</label><br>
@@ -73,6 +75,17 @@
 				<tr>
 					<td colspan="2">
 						<p style="border-bottom: 1px solid #888; padding-bottom:0.75em; font-weight: bold">Default behavior for "&#x1F504; Reload All Tabs" menu command</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>Show command on menu:</p>
+					</td>
+					<td>
+						<p><select id="selReloShow">
+								<option value="true" selected>Yes</option>
+								<option value="false">No thanks</option>
+							</select></p>
 					</td>
 				</tr>
 				<tr>

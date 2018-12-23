@@ -1,23 +1,30 @@
 body {
+	margin: 0;
 	padding: 6px 4px 16px 0;
 	background-color: #eee;
 	--body-size: 14px;
+	font: caption;
 	font-size: var(--body-size);
 	--title-weight: normal;
 	--url-weight: normal;
+}
+body * {
+	box-sizing: border-box;
 }
 /* Tabs */
 nav {
 	margin-left: 16px;
 	margin-right: 16px;
 	width: 650px;
-	margin: 0 16px;
+	margin: 12px 16px 0 16px;
 	border-bottom: 1px solid #aaa;
+	float: left;
 }
 nav ul {
 	list-style-type: none;
-	margin-left: 0;
+	margin: 0;
 	padding-left: 0;
+	float: left;
 }
 nav ul li {
 	width: 120px;
@@ -38,7 +45,7 @@ nav ul li:first-of-type {
 nav ul li:last-of-type {
 	margin-right: 0;
 }
-nav ul li:hover {
+nav ul li:not([disabled]):not(.vis):hover {
 	background-color: #c8c8c8;
 	cursor: pointer;
 }
@@ -46,6 +53,9 @@ nav ul li.vis {
 	background-color: #f8f8f8;
 	cursor: default;
 	border-bottom: 1px solid #f8f8f8;
+}
+nav ul li[disabled] {
+	color: #888;
 }
 /* Tab Contents */
 section {
@@ -69,6 +79,9 @@ section ul li {
 	padding: 3px 6px 2px;
 	background-color: #f8f8f8;
 	cursor: pointer;
+}
+#panels.compact section ul li {
+	height: 2em;
 }
 section ul li:nth-child(even){
 	background-color: #e0f0ff;
@@ -117,6 +130,13 @@ section ul li[incog="true"]  > span.right > span {
 	background-position: right;
 	background-repeat: no-repeat;
 	background-size: 42px;
+}
+#panels.compact section ul li[incog="true"]  > span.right > span {
+	padding-left: 14px;
+	background-size: 16px;
+}
+#panels {
+	clear: left;
 }
 #panels > section {
 	background-color: #f8f8f8;

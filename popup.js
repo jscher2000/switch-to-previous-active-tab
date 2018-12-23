@@ -18,22 +18,12 @@ function getSettings(){
 		// Set up form defaults
 		setFormControls();
 		setRATFormControls();
+		// Set URL display
+		if (oPrefs.blnShowURLLine == false){
+			document.getElementById('panels').className = 'compact';
+		}
 	}).catch((err) => {
 		console.log('Problem getting settings: '+err.message);
-		/* Use defaults? TODO: is this right to do here, or should it be before calling the API?
-		oPrefs = {
-			maxTabs: 30,				// maximum tabIds to store per window
-			maxGlobal: 60,				// maximum tabIds to store across all windows
-			popuptab: 1,				// default tab in popup.html
-			blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
-			blnSameWindow: true,		// Button switches within same window vs. global
-			blnIncludePrivate: false,	// Include private window tabs
-			blnShowFavicons: false,		// Whether to retrieve site icons on recents list
-			blnKeepOpen: true,			// When switching in the same window, keep popup open
-			blnDark: false,				// Toggle colors to bright-on-dark
-			sectionHeight: "490px"		// Height of list panel sections
-		}
-		*/
 	});
 }
 
@@ -55,6 +45,15 @@ function setFormControls(){
 		document.querySelector('input[value="sglob"]').setAttribute('checked', 'checked');
 		if (document.querySelector('input[value="swin"]').hasAttribute('checked'))
 			document.querySelector('input[value="swin"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnShowURLLine){
+		document.querySelector('input[value="showurl"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="hideurl"]').hasAttribute('checked'))
+			document.querySelector('input[value="hideurl"]').removeAttribute('checked');
+	} else {
+		document.querySelector('input[value="hideurl"]').setAttribute('checked', 'checked');
+		if (document.querySelector('input[value="showurl"]').hasAttribute('checked'))
+			document.querySelector('input[value="showurl"]').removeAttribute('checked');
 	}
 	if (oPrefs.blnIncludePrivate){
 		document.querySelector('input[name="prefprivate"]').setAttribute('checked', 'checked');
@@ -120,6 +119,11 @@ function setFormControls(){
 	}
 }
 function setRATFormControls(){
+	if (oRATprefs.RATshowcommand == true){
+		document.querySelector('#selReloShow').selectedIndex = 0;
+	} else {
+		document.querySelector('#selReloShow').selectedIndex = 1;
+	}
 	if (oRATprefs.RATactive == true){
 		document.querySelector('#selReloActive').selectedIndex = 0;
 	} else {
@@ -201,11 +205,21 @@ function getWindow(blnClear){
 			if (arrWTabs){
 				for (var j=0; j<arrWTabs.length; j++){
 					if (arrWTabs[j] in oRecent){
+						if (j == 0 && arrWTabs.length == 1 && oRecent[arrWTabs[j]].title == 'Recent Tabs Popup'
+							&& location.href.replace(location.host, '') == 'moz-extension:///popup.html'){
+							// Disable Window list and break
+							document.getElementById('twin').setAttribute('disabled', 'disabled');
+						}
 						if (oPrefs.blnIncludePrivate || oRecent[arrWTabs[j]].incog === false){
 							addListItem(arrWTabs[j], dest);
 						}
 					} else {
 						browser.tabs.get(arrWTabs[j]).then((currTab) => {
+							if (j == 0 && arrWTabs.length == 1 && currTab.title == 'Recent Tabs Popup'
+								&& location.href.replace(location.host, '') == 'moz-extension:///popup.html'){
+								// Disable Window list and break
+								document.getElementById('twin').setAttribute('disabled', 'disabled');
+							}
 							if (!(currTab.id in oRecent)){
 								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null};
 							}
@@ -220,7 +234,7 @@ function getWindow(blnClear){
 							}
 						});
 					}
-					if (j==14) break;
+					if (j==14 && oPrefs.blnShowURLLine == true) break;
 				}
 			}
 		}).catch((err) => {console.log('Problem getting window: '+err.message);});
@@ -265,7 +279,14 @@ function addListItem(onetab, list){
 	elTemp.setAttribute('src', fixPath(oRecent[onetab]));
 	elTemp = clone.querySelectorAll('span > span');
 	elTemp[0].appendChild(document.createTextNode(oRecent[onetab].title));
-	elTemp[1].appendChild(document.createTextNode(oRecent[onetab].url));
+	if (oPrefs.blnShowURLLine == true){
+		elTemp[1].appendChild(document.createTextNode(oRecent[onetab].url));
+	} else {
+		elTemp[0].closest('li').setAttribute('title', oRecent[onetab].url);
+		elTemp = clone.querySelectorAll('span > br');
+		elTemp[1].remove();
+		elTemp[0].remove();
+	}
 	elTemp = clone.querySelector('span.right');
 	elTemp.insertBefore(document.createTextNode(oRecent[onetab].time), elTemp.firstChild);
 	// Add the item to the list
@@ -276,6 +297,7 @@ function addListItem(onetab, list){
 
 function panelClick(evt){
 	var tgt = evt.target;
+	if (tgt.hasAttribute('disabled')) return;
 	panelSwitch(tgt);
 }
 
@@ -346,6 +368,8 @@ function updatePrefs(evt){
 	else oPrefs.blnButtonSwitches = false;
 	if (document.querySelector('input[value="swin"]').checked) oPrefs.blnSameWindow = true;
 	else oPrefs.blnSameWindow = false;
+	if (document.querySelector('input[value="showurl"]').checked) oPrefs.blnShowURLLine = true;
+	else oPrefs.blnShowURLLine = false;
 	if (document.querySelector('input[name="prefprivate"]').checked){
 		if (oPrefs.blnIncludePrivate != true) reinitPrivate = true;
 		oPrefs.blnIncludePrivate = true;
@@ -470,6 +494,8 @@ function doReinit(evt){
 }
 function updateRATPrefs(evt){
 	// update oRATprefs
+	if (document.querySelector('#selReloShow').value == "true") oRATprefs.RATshowcommand = true;
+	else oRATprefs.RATshowcommand = false;
 	if (document.querySelector('#selReloActive').value == "true") oRATprefs.RATactive = true;
 	else oRATprefs.RATactive = false;
 	if (document.querySelector('#selReloPinned').value == "true") oRATprefs.RATpinned = true;

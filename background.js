@@ -13,6 +13,7 @@
   Revision 1.3 - adapt to new site icon storage in Fx63
   Revision 1.4 - more appearance options: sans-serif font, font-size, bold title, bold URL
   Revision 1.5 - Reload All Tabs (initial implementation), use HTML template instead of insertAdjacentHTML
+  Revision 1.6 - Option to hide the Reload All Tabs command
 */
 
 /**** Create and populate data structure ****/
@@ -23,6 +24,7 @@ var oPrefs = {
 	popuptab: 1,				// default tab in popup.html
 	blnButtonSwitches: true,	// Whether button switches immediately or shows recents	
 	blnSameWindow: true,		// Button switches within same window vs. global
+	blnShowURLLine: true,		// Show URL on separate line in lists
 	blnIncludePrivate: false,	// Include private window tabs
 	blnShowFavicons: false,		// Whether to retrieve site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
@@ -47,6 +49,7 @@ browser.storage.local.get("prefs").then((results) => {
 
 // Preferences for RELOAD ALL TABS
 var oRATprefs = {
+	RATshowcommand: true,		// Show Reload All Tabs on the menu
 	RATactive: true,			// whether to include the active tab
 	RATpinned: true,			// whether to include pinned tabs
 	RATdiscarded: true,			// whether to include discarded tabs
@@ -421,22 +424,22 @@ function doSwitch(oKey, wid){
 // Set icon image and tooltip based on ability to switch within current window
 function setButton(wid){
 	if (blnIsPrivate && oPrefs.blnIncludePrivate === false && oPrefs.blnButtonSwitches){
-		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setIcon({path: 'icons/nolasttab-32.png'});
 		browser.browserAction.setTitle({title: 'No Quick Switch in Private Window'});
 		return;
 	}
 	var arrWTabs = oTabs[wid];
 	if (!arrWTabs){
 		// window focused but tab data not available yet; assume the worst
-		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setIcon({path: 'icons/nolasttab-32.png'});
 		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'});			
 		return;
 	}
 	if (arrWTabs.length > 1 || (oPrefs.blnSameWindow === false && oTabs['global'].length > 1)) {
-		browser.browserAction.setIcon({path: 'icons/lasttab.png'});
+		browser.browserAction.setIcon({path: 'icons/lasttab-32.png'});
 		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
 	} else {
-		browser.browserAction.setIcon({path: 'icons/nolasttab.png'});
+		browser.browserAction.setIcon({path: 'icons/nolasttab-32.png'});
 		browser.browserAction.setTitle({title: 'Last Accessed Tab Not Available'}); 
 	}
 }
@@ -474,23 +477,34 @@ browser.menus.create({
 });
 
 // Context menu for RELOAD ALL TABS
-if (oRATprefs.RATactive === true){
-	var RATtitle = '🔄 Reload All Tabs';
-} else {
-	var RATtitle = '🔄 Reload Other Tabs';
-}
+var RATitem = null;
+function RATmenusetup(){
+	if (oRATprefs.RATshowcommand === true && RATitem === null){
+		if (oRATprefs.RATactive === true){
+			var RATtitle = '🔄 Reload All Tabs';
+		} else {
+			var RATtitle = '🔄 Reload Other Tabs';
+		}
 
-if (oRATprefs.RATpinned === false){
-	RATtitle += ' (Non-Pinned)';
+		if (oRATprefs.RATpinned === false){
+			RATtitle += ' (Non-Pinned)';
+		}
+		if (oRATprefs.RATbypasscache === true){
+			RATtitle += ' (Bypass Cache)';
+		}
+		RATitem = browser.menus.create({
+		  id: 'reload_all_tabs_Fx64',
+		  title: RATtitle,
+		  contexts: ["tab"]
+		});
+	} else if (oRATprefs.RATshowcommand === false && RATitem !== null) {
+		browser.menus.remove('reload_all_tabs_Fx64').catch( (err) => {
+			console.log('Error removing RAT menu item: ' + err.description) 
+		});
+		RATitem = null;
+	}
 }
-if (oRATprefs.RATbypasscache === true){
-	RATtitle += ' (Bypass Cache)';
-}
-browser.menus.create({
-  id: 'reload_all_tabs_Fx64',
-  title: RATtitle,
-  contexts: ["tab"]
-});
+RATmenusetup();
 
 browser.menus.onClicked.addListener((menuInfo, currTab) => {
 	switch (menuInfo.menuItemId) {
@@ -523,11 +537,14 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 		case 'reload_all_tabs_Fx64':
 			// Check modifiers
 			if (menuInfo.modifiers.includes('Ctrl')){
-				// Ctrl+click should call up options
+				// Ctrl+click should call up options 
+				// Use popup window in case browserAction is overflowed or removed
 				oPrefs.popuptab = 3;
-				browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
-				.then(browser.browserAction.openPopup())
-				.then(browser.browserAction.setPopup({popup: ''}));
+				browser.windows.create({
+					url: browser.extension.getURL('popup.html'),
+					type: 'popup', state: 'normal',
+					top: 50, width: 698, height: 588
+				});
 			} else if (menuInfo.modifiers.includes('Shift')){
 				// Shift+click should bypass cache
 				reloadAll(currTab.windowId, true);
@@ -566,6 +583,7 @@ function handleMessage(request, sender, sendResponse) {
 		var oSettings = request["update"];
 		oPrefs.blnButtonSwitches = oSettings.blnButtonSwitches;
 		oPrefs.blnSameWindow = oSettings.blnSameWindow;
+		oPrefs.blnShowURLLine = oSettings.blnShowURLLine;
 		oPrefs.blnIncludePrivate = oSettings.blnIncludePrivate;
 		oPrefs.blnShowFavicons = oSettings.blnShowFavicons;
 		oPrefs.blnKeepOpen = oSettings.blnKeepOpen;
@@ -580,6 +598,7 @@ function handleMessage(request, sender, sendResponse) {
 	} else if ("updateRAT" in request) {
 		// receive form updates, store to oRATprefs, and commit to storage
 		var oSettings = request["updateRAT"];
+		oRATprefs.RATshowcommand = oSettings.RATshowcommand;
 		oRATprefs.RATactive = oSettings.RATactive;
 		oRATprefs.RATpinned = oSettings.RATpinned;
 		oRATprefs.RATdiscarded = oSettings.RATdiscarded;
@@ -590,6 +609,7 @@ function handleMessage(request, sender, sendResponse) {
 		oRATprefs.RATplaying = oSettings.RATplaying;
 		browser.storage.local.set({RATprefs: oRATprefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
+		RATmenusetup();
 	} else if ("reinit" in request) {
 		if (request.reinit){
 			initObjects();
