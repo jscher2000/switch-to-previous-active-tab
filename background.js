@@ -14,6 +14,7 @@
   Revision 1.4 - more appearance options: sans-serif font, font-size, bold title, bold URL
   Revision 1.5 - Reload All Tabs (initial implementation), use HTML template instead of insertAdjacentHTML
   Revision 1.6 - Option to hide the Reload All Tabs command
+  Revision 1.7 - Fix for 1.6
 */
 
 /**** Create and populate data structure ****/
@@ -48,6 +49,7 @@ browser.storage.local.get("prefs").then((results) => {
 }).catch((err) => {console.log('Error retrieving "prefs" from storage: '+err.message);});
 
 // Preferences for RELOAD ALL TABS
+var RATitem = null; // for context menu item
 var oRATprefs = {
 	RATshowcommand: true,		// Show Reload All Tabs on the menu
 	RATactive: true,			// whether to include the active tab
@@ -61,7 +63,7 @@ var oRATprefs = {
 	asknow: false				// Flag to show user buttons about playing tabs
 }
 
-// Update oRATprefs from storage
+// Update oRATprefs from storage, set up the context menu item
 browser.storage.local.get("RATprefs").then((results) => {
 	if (results.RATprefs != undefined){
 		if (JSON.stringify(results.RATprefs) != '{}'){
@@ -71,6 +73,7 @@ browser.storage.local.get("RATprefs").then((results) => {
 			}
 		}
 	}
+	RATmenusetup();
 }).catch((err) => {console.log('Error retrieving "RATprefs" from storage: '+err.message);});
 
 var oTabs = {};			// store arrays of tabId's in descending order by lastAccessed
@@ -477,7 +480,6 @@ browser.menus.create({
 });
 
 // Context menu for RELOAD ALL TABS
-var RATitem = null;
 function RATmenusetup(){
 	if (oRATprefs.RATshowcommand === true && RATitem === null){
 		if (oRATprefs.RATactive === true){
@@ -504,7 +506,6 @@ function RATmenusetup(){
 		RATitem = null;
 	}
 }
-RATmenusetup();
 
 browser.menus.onClicked.addListener((menuInfo, currTab) => {
 	switch (menuInfo.menuItemId) {
