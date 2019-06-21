@@ -15,6 +15,7 @@
   Revision 1.5 - Reload All Tabs (initial implementation), use HTML template instead of insertAdjacentHTML
   Revision 1.6 - Option to hide the Reload All Tabs command
   Revision 1.7 - Fix for 1.6
+  Revision 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
 */
 
 /**** Create and populate data structure ****/
@@ -748,3 +749,13 @@ function loadMonitor(tabId, changeInfo, oTab){
 		doQueuedReload(-1);
 	}
 }
+
+/**** Keyboard shortcut handler ****/
+browser.commands.onCommand.addListener(strName => {
+	if (strName === 'previous-tab'){
+		// Within window switch (first need to get the current window)
+		browser.windows.getCurrent().then((currWin) => {
+			doSwitch(currWin.id, currWin.id);
+		})
+	}
+})
