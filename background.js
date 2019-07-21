@@ -1,5 +1,5 @@
 /* 
-  Copyright 2018. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
   Revision 0.3 - revise and prepopulate data structure
   Revision 0.4 - add window/global switch, context menu items on toolbar button
   Revision 0.5 - add recent tabs list (requires tabs permission)
@@ -16,6 +16,7 @@
   Revision 1.6 - Option to hide the Reload All Tabs command
   Revision 1.7 - Fix for 1.6
   Revision 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
+  Revision 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
 */
 
 /**** Create and populate data structure ****/
