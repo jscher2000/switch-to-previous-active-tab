@@ -17,6 +17,7 @@
   Revision 1.7 - Fix for 1.6
   Revision 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
   Revision 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
+  Revision 1.8.2 - Bug fix for Global list not changing windows
 */
 
 /**** Create and populate data structure ****/

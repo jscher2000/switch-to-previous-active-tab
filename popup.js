@@ -335,9 +335,10 @@ function gotoTab(evt){
 					self.close();
 				}
 			} else {
-				// Change window, close panel => BUGGY, FOCUS SHIFTS TO BG WINDOW?
+				// Change window
 				browser.windows.update(newTab.windowId, {focused: true});
-				self.close();
+				// Close panel => BUGGY, FOCUS SHIFTS, DISABLE FOR NOW v1.8.2
+				//self.close();
 			}
 		});
 	});
