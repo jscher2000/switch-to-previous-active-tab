@@ -18,6 +18,7 @@
   Revision 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
   Revision 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
   Revision 1.8.2 - Bug fix for Global list not changing windows
+  Revision 1.9 - For Reload All Tabs, option to automatically go to tabs needing attention
 */
 
 /**** Create and populate data structure ****/
@@ -63,7 +64,8 @@ var oRATprefs = {
 	RATseqnum: 3,				// simultaneous requests if RATsequential == true
 	RATbypasscache: false,		// always bypass cache (false = bypass on Shift+click)
 	RATplaying: 'skip',			// how to handle tabs with audible media (ask, skip, reload)
-	asknow: false				// Flag to show user buttons about playing tabs
+	asknow: false,				// Flag to show user buttons about playing tabs
+	RATgotoAttn: false			// Automatically go to tabs needing attention
 }
 
 // Update oRATprefs from storage, set up the context menu item
@@ -442,7 +444,8 @@ function setButton(wid){
 		return;
 	}
 	if (arrWTabs.length > 1 || (oPrefs.blnSameWindow === false && oTabs['global'].length > 1)) {
-		browser.browserAction.setIcon({path: 'icons/lasttab-32.png'});
+		if (oPrefs.blnDark) browser.browserAction.setIcon({path: 'icons/lasttab-32-light.png'});
+		else browser.browserAction.setIcon({path: 'icons/lasttab-32.png'});
 		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
 	} else {
 		browser.browserAction.setIcon({path: 'icons/nolasttab-32.png'});
@@ -551,10 +554,10 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 				});
 			} else if (menuInfo.modifiers.includes('Shift')){
 				// Shift+click should bypass cache
-				reloadAll(currTab.windowId, true);
+				reloadAll(currTab.id, currTab.windowId, true);
 			} else {
 				// Click should execute with current preferences
-				reloadAll(currTab.windowId, oRATprefs.RATbypasscache);
+				reloadAll(currTab.id, currTab.windowId, oRATprefs.RATbypasscache);
 			}
 			break;
 		default:
@@ -611,6 +614,7 @@ function handleMessage(request, sender, sendResponse) {
 		oRATprefs.RATseqnum = oSettings.RATseqnum;
 		oRATprefs.RATbypasscache = oSettings.RATbypasscache;
 		oRATprefs.RATplaying = oSettings.RATplaying;
+		oRATprefs.RATgotoAttn = oSettings.RATgotoAttn;
 		browser.storage.local.set({RATprefs: oRATprefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 		RATmenusetup();
@@ -624,7 +628,15 @@ browser.runtime.onMessage.addListener(handleMessage);
 
 /**** RELOAD ALL TABS ****/
 
-function reloadAll(windId, blnBypass){
+let arrQueue = [], intLoading = 0, attnQueue = [], attnCurrent = 0, attnReturn = 0;
+function reloadAll(currentTabId, windId, blnBypass){
+	if (oRATprefs.RATgotoAttn) {
+		// Define listener to handle tabs needing attention (e.g., re-POST)
+		browser.tabs.onUpdated.addListener(attnHandler);
+		attnQueue = []; 
+		attnCurrent = 0;
+		attnReturn = currentTabId;
+	}
 	// Fetch current window tabs, use reverse order accessed
 	browser.tabs.query({windowId: windId}).then((arrAllTabs) => {
 		// Sort array of tab objects in descending order by lastAccessed (numeric)
@@ -677,12 +689,11 @@ function reloadAll(windId, blnBypass){
 		}
 	})
 }
-let arrQueue = [], intLoading = 0;
 function doTabReload(oTab, blnBypassCache){
 	if (oRATprefs.RATsequential){
 		arrQueue.push({index: oTab.id, tab: oTab, bypass: blnBypassCache, working: 'waiting'});
 		if (intLoading === 0){
-			// Define listener to check tab.status == 'completed' TODO
+			// Define listener to check tab.status == 'completed'
 			browser.tabs.onUpdated.addListener(loadMonitor);
 		}
 		if (intLoading < oRATprefs.RATseqnum){
@@ -739,7 +750,6 @@ async function doQueuedReload(index){
 }
 function loadMonitor(tabId, changeInfo, oTab){
 	if (!changeInfo.status || changeInfo.status == 'loading') return;
-	console.log(changeInfo);
 	var task = arrQueue.find( objTask => objTask.index === tabId );	
 	if (task){
 		task.working = 'complete';
@@ -749,6 +759,33 @@ function loadMonitor(tabId, changeInfo, oTab){
 		// console.log('[loadMonitor] Successfully reloaded ' + task.index);
 		// Continue with the queue
 		doQueuedReload(-1);
+	}
+}
+function attnHandler(tabId, changeInfo, oTab){
+	if (changeInfo.attention){
+		// Keep track of tabs needing attention and visit them sequentially
+		attnQueue.push(tabId);
+		if (attnCurrent === 0){
+			attnCurrent = tabId;
+			browser.tabs.update(attnCurrent, {active:true});
+		}
+		//console.log(attnQueue);
+	} else if (changeInfo.status && tabId == attnCurrent){
+		if (changeInfo.status == 'loading'){
+			// This one is reloading, we can move on
+			//console.log(attnQueue);
+			// Take this tab off the list
+			var index = attnQueue.indexOf(tabId);
+			if (index !== -1) attnQueue.splice(index, 1);
+			//console.log(attnQueue);
+			// Go to the next one
+			if (attnQueue.length > 0){
+				attnCurrent = attnQueue[0];
+				browser.tabs.update(attnCurrent, {active:true});
+			} else if (attnReturn !== 0){
+				browser.tabs.update(attnReturn, {active:true});
+			}
+		}
 	}
 }
 

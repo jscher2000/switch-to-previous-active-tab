@@ -159,6 +159,11 @@ function setRATFormControls(){
 	} else {
 		document.querySelector('#selReloSeq').selectedIndex = oRATprefs.RATseqnum - 1;
 	}
+	if (oRATprefs.RATgotoAttn == true){
+		document.querySelector('#selReloAttention').selectedIndex = 1;
+	} else {
+		document.querySelector('#selReloAttention').selectedIndex = 0;
+	}
 }
 
 function getGlobal(blnClear){
@@ -511,6 +516,8 @@ function updateRATPrefs(evt){
 		oRATprefs.RATsequential = true;
 		oRATprefs.RATseqnum = document.querySelector('#selReloSeq').value;
 	}
+	if (document.querySelector('#selReloAttention').value == "true") oRATprefs.RATgotoAttn = true;
+	else oRATprefs.RATgotoAttn = false;
 	// send to background script
 	browser.runtime.sendMessage({
 		updateRAT: oRATprefs
