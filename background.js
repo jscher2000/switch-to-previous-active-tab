@@ -1,5 +1,5 @@
 /* 
-  Copyright 2019. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
   Revision 0.3 - revise and prepopulate data structure
   Revision 0.4 - add window/global switch, context menu items on toolbar button
   Revision 0.5 - add recent tabs list (requires tabs permission)
@@ -19,6 +19,7 @@
   Revision 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
   Revision 1.8.2 - Bug fix for Global list not changing windows
   Revision 1.9 - For Reload All Tabs, option to automatically go to tabs needing attention
+  Revision 1.9.5 - Bypass selected extension page (Panorama Tabs) for quick switch
 */
 
 /**** Create and populate data structure ****/
@@ -38,7 +39,9 @@ var oPrefs = {
 	strFontSize: "14px",		// Default font size for popup
 	blnBoldTitle: false,		// Whether to bold the window title
 	blnBoldURL: false,			// Whether to bold the page URL
-	sectionHeight: "490px"		// Height of list panel sections
+	sectionHeight: "490px",		// Height of list panel sections
+	extPageSkipTitle: ['Panorama View'],
+	extPageSkipUrl: []
 }
 // Update oPrefs from storage
 browser.storage.local.get("prefs").then((results) => {
@@ -111,6 +114,17 @@ function initObjects(){
 				if (arrWTabs.length < oPrefs.maxTabs) {
 					arrWTabs.push(arrAllTabs[i].id);
 					oTabs[arrAllTabs[i].windowId] = arrWTabs;
+				}
+			}
+			// Add to skip list if needed (v1.9.5)
+			if (oPrefs.extPageSkipTitle.includes(arrAllTabs[i].title) && arrAllTabs[i].url.indexOf('moz-extension:') === 0 || 
+				oPrefs.extPageSkipUrl.includes(arrAllTabs[i].url) ) {
+				if (!('skip' in oTabs)) {
+					oTabs['skip'] = [arrAllTabs[i].id];
+				} else {
+					arrWTabs = oTabs['skip'];
+					arrWTabs.push(arrAllTabs[i].id);
+					oTabs['skip'] = arrWTabs;
 				}
 			}
 		}
@@ -221,6 +235,21 @@ browser.tabs.onActivated.addListener((info) => {
 				// active tab already is top-of-list so no action
 			}
 		}
+		// Add to skip list if needed (v1.9.5)
+		if (oPrefs.extPageSkipTitle.includes(currTab.title) && currTab.url.indexOf('moz-extension:') === 0 || 
+			oPrefs.extPageSkipUrl.includes(currTab.url) ) {
+			if (!('skip' in oTabs)) {
+				oTabs['skip'] = [info.tabId];
+			} else {
+				arrWTabs = oTabs['skip'];
+				// Add if tabId is not in the existing list
+				var pos = arrWTabs.indexOf(info.tabId);
+				if (pos == -1) {
+					arrWTabs.push(info.tabId);
+					oTabs['skip'] = arrWTabs;
+				}
+			}
+		}
 		// Update toolbar button
 		setButton(info.windowId);
 	}).catch((err) => {console.log('Promise rejected on tabs.get(): '+err.message);});
@@ -254,6 +283,17 @@ browser.tabs.onRemoved.addListener((id, info) => {
 		}
 		// Update toolbar button
 		setButton(info.windowId);
+	}
+	// Remove from skip list if needed (v1.9.5)
+	if (('skip' in oTabs)) {
+		arrWTabs = oTabs['skip'];
+		pos = arrWTabs.indexOf(id);
+		if (pos > -1) { 
+			// remove from its old position
+			arrWTabs.splice(pos, 1);
+			// store change
+			oTabs['skip'] = arrWTabs;
+		}
 	}
 });
 
@@ -423,7 +463,14 @@ browser.browserAction.onClicked.addListener((currTab) => {
 function doSwitch(oKey, wid){
 	var arrWTabs = oTabs[oKey];
 	if (arrWTabs && arrWTabs.length > 1) {
-		browser.tabs.update(arrWTabs[1], {active:true}).then((currTab) => {
+		newTabIndex = 1;
+		if (oTabs['skip'] && oTabs['skip'].length > 0){
+			while (newTabIndex < arrWTabs.length + 1){
+				if (!oTabs['skip'].includes(arrWTabs[newTabIndex])) break;
+				newTabIndex++
+			}
+		}
+		browser.tabs.update(arrWTabs[newTabIndex], {active:true}).then((currTab) => {
 			if (currTab.windowId != wid) browser.windows.update(currTab.windowId, {focused: true});
 		});
 	}
@@ -572,6 +619,14 @@ function handleMessage(request, sender, sendResponse) {
 		if (request.want == "global") {
 			sendResponse({
 				glist: oTabs['global']
+			});
+			return true;
+		} else if (request.want == "skip") {
+			if (!oTabs['skip']){
+				oTabs['skip'] = [];
+			}
+			sendResponse({
+				list: oTabs['skip']
 			});
 			return true;
 		} else if (request.want == "settings") {

@@ -4,6 +4,7 @@ var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0,
 var oRecent = {};
 var reinitPrivate = false;
 var reinitFavicons = false;
+var arrSkip = [];
 
 function getSettings(){
 	browser.runtime.sendMessage({
@@ -252,6 +253,14 @@ function getWindow(blnClear){
 	});
 }
 
+function getSkip(){
+	browser.runtime.sendMessage({
+		want: "skip"
+	}).then((oSkip) => {
+		arrSkip = oSkip.list;
+	}).catch((err) => {console.log('Problem getting skip list: '+err.message);});
+}
+
 function fixPath(tabdata){
 	// Firefox 63 saves a data URI instead of using the original URL
 	if (tabdata.icon.indexOf('data:image/png;base64,') == 0 || tabdata.icon.indexOf('data:image/x-icon;base64,') == 0){
@@ -279,6 +288,9 @@ function addListItem(onetab, list){
 	// Populate the template
 	var elTemp = clone.querySelector('li');
 	elTemp.id = onetab;
+	if (arrSkip.includes(onetab)){
+		elTemp.className = 'skip';
+	}
 	elTemp.setAttribute('incog', oRecent[onetab].incog);
 	elTemp = clone.querySelector('span > span > img');
 	elTemp.setAttribute('src', fixPath(oRecent[onetab]));
@@ -352,6 +364,7 @@ function gotoTab(evt){
 getSettings();
 getGlobal(true);
 getWindow(true);
+getSkip();
 document.querySelector('nav > ul').addEventListener('click', panelClick, false);
 document.querySelector('#tabthiswin').addEventListener('click', gotoTab, false);
 document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
