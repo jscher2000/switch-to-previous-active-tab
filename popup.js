@@ -56,6 +56,13 @@ function setFormControls(){
 		if (document.querySelector('input[value="showurl"]').hasAttribute('checked'))
 			document.querySelector('input[value="showurl"]').removeAttribute('checked');
 	}
+	if (oPrefs.blnKeepOpen){
+		document.querySelector('input[name="prefkeepopen"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
+	}
+	// Privacy-related preferences
 	if (oPrefs.blnIncludePrivate){
 		document.querySelector('input[name="prefprivate"]').setAttribute('checked', 'checked');
 	} else {
@@ -69,19 +76,35 @@ function setFormControls(){
 			document.querySelector('input[name="preficons"]').removeAttribute('checked');
 	}
 	// Appearance adjustments
-	if (oPrefs.blnKeepOpen){
-		document.querySelector('input[name="prefkeepopen"]').setAttribute('checked', 'checked');
-	} else {
-		if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
-			document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
+	switch (oPrefs.blnDark){
+		case true: //dark
+			document.body.classList.add('dark');
+			document.querySelector('option[value="colordark"]').setAttribute('selected', 'selected');
+			break;
+		case false: //light
+			document.body.classList.remove('dark');
+			document.querySelector('option[value="colorlight"]').setAttribute('selected', 'selected');
+			break;
+		default: //auto
+			if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.body.classList.add('dark');
+			else document.body.classList.remove('dark');
+			document.querySelector('option[value="colorauto"]').setAttribute('selected', 'selected');		
 	}
-	if (oPrefs.blnDark){
-		document.body.className = 'dark';
-		document.querySelector('input[name="prefdark"]').setAttribute('checked', 'checked');
-	} else {
-		document.body.className = '';
-		if (document.querySelector('input[name="prefdark"]').hasAttribute('checked'))
-			document.querySelector('input[name="prefdark"]').removeAttribute('checked');
+	switch (oPrefs.blnColorbars){
+		case true: //blue
+			document.body.classList.add('blue');
+			document.body.classList.remove('gray');
+			document.querySelector('option[value="barsblue"]').setAttribute('selected', 'selected');
+			break;
+		case false: //gray
+			document.body.classList.add('gray');
+			document.body.classList.remove('blue');
+			document.querySelector('option[value="barsgray"]').setAttribute('selected', 'selected');
+			break;
+		default: //no bars
+			document.body.classList.remove('blue');
+			document.body.classList.remove('gray');
+			document.querySelector('option[value="barsnone"]').setAttribute('selected', 'selected');		
 	}
 	if (oPrefs.blnSansSerif){
 		document.body.style.setProperty('font-family', 'sans-serif', 'important');
@@ -370,7 +393,8 @@ document.querySelector('#tabthiswin').addEventListener('click', gotoTab, false);
 document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
 document.querySelector('#btnSave').addEventListener('click', updatePrefs, false);
 document.querySelector('#btnReset').addEventListener('click', clearForm, false);
-document.querySelector('input[name="prefdark"]').addEventListener('click', updateDarkmode, false);
+document.querySelector('select[name="prefdark"]').addEventListener('change', updateDarkmode, false);
+document.querySelector('select[name="colorbars"]').addEventListener('change', updateColorbars, false);
 document.querySelector('input[name="prefsans"]').addEventListener('click', updatefont, false);
 document.querySelector('select[name="fontsize"]').addEventListener('change', updatefont, false);
 document.querySelector('input[name="prefboldtitle"]').addEventListener('click', updateweightvar, false);
@@ -405,8 +429,28 @@ function updatePrefs(evt){
 	}
 	if (document.querySelector('input[name="prefkeepopen"]').checked) oPrefs.blnKeepOpen = true;
 	else oPrefs.blnKeepOpen = false;
-	if (document.querySelector('input[name="prefdark"]').checked) oPrefs.blnDark = true;
-	else oPrefs.blnDark = false;
+	var prefdark = document.querySelector('select[name="prefdark"]');
+	switch (prefdark.value){
+		case 'colordark':
+			oPrefs.blnDark = true;
+			break;
+		case 'colorlight':
+			oPrefs.blnDark = false;
+			break;
+		default: //auto
+			oPrefs.blnDark = undefined;
+	}
+	var colorbars = document.querySelector('select[name="colorbars"]');
+	switch (colorbars.value){
+		case 'barsblue':
+			oPrefs.blnColorbars = true;
+			break;
+		case 'barsgray':
+			oPrefs.blnColorbars = false;
+			break;
+		default: // flat
+			oPrefs.blnColorbars = undefined;
+	}
 	if (document.querySelector('input[name="prefsans"]').checked) oPrefs.blnSansSerif = true;
 	else oPrefs.blnSansSerif = false;
 	oPrefs.strFontSize = document.querySelector('select[name="fontsize"]').value;
@@ -434,12 +478,35 @@ function cleanse(txt){
 	return txt.replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
 }
 function updateDarkmode(evt){
-	if (evt && evt.target) var chk = evt.target;
-	else var chk = document.querySelector('input[name="prefdark"]');
-	if (chk.checked){
-		document.body.className = 'dark';
-	} else {
-		document.body.className = '';
+	if (evt && evt.target) var tgt = evt.target;
+	else var tgt = document.querySelector('select[name="prefdark"]');
+	switch (tgt.value){
+		case 'colordark':
+			document.body.classList.add('dark');
+			break;
+		case 'colorlight':
+			document.body.classList.remove('dark');
+			break;
+		default: //auto
+			if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.body.classList.add('dark');
+			else document.body.classList.remove('dark');
+	}
+}
+function updateColorbars(evt){
+	if (evt && evt.target) var tgt = evt.target;
+	else var tgt = document.querySelector('select[name="colorbars"]');
+	switch (tgt.value){
+		case 'barsblue': //blue
+			document.body.classList.add('blue');
+			document.body.classList.remove('gray');
+			break;
+		case 'barsgray': //gray
+			document.body.classList.add('gray');
+			document.body.classList.remove('blue');
+			break;
+		default: //no bars
+			document.body.classList.remove('blue');
+			document.body.classList.remove('gray');
 	}
 }
 function updateweightvar(evt){
@@ -500,6 +567,7 @@ function clearForm(evt){
 	// BUG: triggers a change of tab in some cases (private mode settings)
 	document.getElementById('frmOpts').reset();
 	updateDarkmode(null);
+	updateColorbars(null);
 	document.querySelector('input[name="prefheight"]').value = parseInt(oPrefs.sectionHeight);
 	setHeight(oPrefs.sectionHeight);
 }

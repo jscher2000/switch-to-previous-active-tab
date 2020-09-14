@@ -83,8 +83,14 @@ section ul li {
 #panels.compact section ul li {
 	height: 2em;
 }
-section ul li:nth-child(even){
+body.blue section ul li:nth-child(even){ /* Updated 1.9.6 */
 	background-color: #e0f0ff;
+}
+body.gray section ul li:nth-child(even){ /* Added 1.9.6 */
+	background-color: #e0e0e0;
+}
+body:not(.gray):not(.blue) section ul li:not(:last-of-type) { /* Added 1.9.6 */
+	border-bottom: 1px solid #ccc;
 }
 section ul li:first-of-type {
 	cursor: unset;
@@ -185,9 +191,15 @@ body.dark nav ul li.vis {
 body.dark section ul li {
 	background-color: #444;
 }
-body.dark section ul li:nth-child(even){
+body.dark.blue section ul li:nth-child(even){ /* Updated 1.9.6 */
 	background-color: #009;
-} 
+}
+body.dark.gray section ul li:nth-child(even){ /* Added 1.9.6 */
+	background-color: #111;
+}
+body.dark:not(.gray):not(.blue) section ul li:not(:last-of-type) { /* Added 1.9.6 */
+	border-bottom: 1px solid #000;
+}
 body.dark #panels > section {
 	background-color: #444;
 }

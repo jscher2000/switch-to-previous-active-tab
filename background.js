@@ -1,25 +1,26 @@
 /* 
   Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
-  Revision 0.3 - revise and prepopulate data structure
-  Revision 0.4 - add window/global switch, context menu items on toolbar button
-  Revision 0.5 - add recent tabs list (requires tabs permission)
-  Revision 0.6 - private windows excluded unless selected; handle detach/attach
-  Revision 0.7 - popup list, add storage
-  Revision 0.8 - refine popup behavior, color scheme/height options
-  Revision 0.9 - option to show site icons on the popup, rebuild button ERROR
-  Revision 1.0 - option to show site icons on the popup, rebuild button
-  Revision 1.1 - don't build oRecent until the list is requested
-  Revision 1.2 - fix bug in popup.js
-  Revision 1.3 - adapt to new site icon storage in Fx63
-  Revision 1.4 - more appearance options: sans-serif font, font-size, bold title, bold URL
-  Revision 1.5 - Reload All Tabs (initial implementation), use HTML template instead of insertAdjacentHTML
-  Revision 1.6 - Option to hide the Reload All Tabs command
-  Revision 1.7 - Fix for 1.6
-  Revision 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
-  Revision 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
-  Revision 1.8.2 - Bug fix for Global list not changing windows
-  Revision 1.9 - For Reload All Tabs, option to automatically go to tabs needing attention
-  Revision 1.9.5 - Bypass selected extension page (Panorama Tabs) for quick switch
+  version 0.3 - revise and prepopulate data structure
+  version 0.4 - add window/global switch, context menu items on toolbar button
+  version 0.5 - add recent tabs list (requires tabs permission)
+  version 0.6 - private windows excluded unless selected; handle detach/attach
+  version 0.7 - popup list, add storage
+  version 0.8 - refine popup behavior, color scheme/height options
+  version 0.9 - option to show site icons on the popup, rebuild button ERROR
+  version 1.0 - option to show site icons on the popup, rebuild button
+  version 1.1 - don't build oRecent until the list is requested
+  version 1.2 - fix bug in popup.js
+  version 1.3 - adapt to new site icon storage in Fx63
+  version 1.4 - more appearance options: sans-serif font, font-size, bold title, bold URL
+  version 1.5 - Reload All Tabs (initial implementation), use HTML template instead of insertAdjacentHTML
+  version 1.6 - Option to hide the Reload All Tabs command
+  version 1.7 - Fix for 1.6
+  version 1.8 - Handle keyboard shortcut (Alt+Shift+Left via manifest.json)
+  version 1.8.1 - Change keyboard shortcut for Mac to avoid conflict with selecting to beginning of word
+  version 1.8.2 - Bug fix for Global list not changing windows
+  version 1.9 - For Reload All Tabs, option to automatically go to tabs needing attention
+  version 1.9.5 - Bypass selected extension page (Panorama Tabs) for quick switch
+  version 1.9.6 - Update color scheme options
 */
 
 /**** Create and populate data structure ****/
@@ -34,7 +35,8 @@ var oPrefs = {
 	blnIncludePrivate: false,	// Include private window tabs
 	blnShowFavicons: false,		// Whether to retrieve site icons on recents list
 	blnKeepOpen: true,			// When switching in the same window, keep popup open
-	blnDark: false,				// Toggle colors to bright-on-dark
+	blnDark: undefined,			// Toggle colors to bright-on-dark (true=dark, false=light, undefined=auto)
+	blnColorbars: true,			// Use color bar background for list (true=blue, false=gray, undefined=mono)
 	blnSansSerif: false,		// Whether to use the default sans-serif font
 	strFontSize: "14px",		// Default font size for popup
 	blnBoldTitle: false,		// Whether to bold the window title
@@ -491,7 +493,7 @@ function setButton(wid){
 		return;
 	}
 	if (arrWTabs.length > 1 || (oPrefs.blnSameWindow === false && oTabs['global'].length > 1)) {
-		if (oPrefs.blnDark) browser.browserAction.setIcon({path: 'icons/lasttab-32-light.png'});
+		if (oPrefs.blnDark === true || (oPrefs.blnDark === undefined && window.matchMedia('(prefers-color-scheme: dark)').matches)) browser.browserAction.setIcon({path: 'icons/lasttab-32-light.png'});
 		else browser.browserAction.setIcon({path: 'icons/lasttab-32.png'});
 		browser.browserAction.setTitle({title: 'Switch to Last Accessed Tab'}); 
 	} else {
@@ -650,6 +652,7 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.blnShowFavicons = oSettings.blnShowFavicons;
 		oPrefs.blnKeepOpen = oSettings.blnKeepOpen;
 		oPrefs.blnDark = oSettings.blnDark;
+		oPrefs.blnColorbars = oSettings.blnColorbars;
 		oPrefs.blnSansSerif = oSettings.blnSansSerif;
 		oPrefs.strFontSize = oSettings.strFontSize;
 		oPrefs.blnBoldTitle = oSettings.blnBoldTitle;
