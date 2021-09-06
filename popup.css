@@ -3,6 +3,7 @@ body {
 	padding: 6px 4px 16px 0;
 	background-color: #eee;
 	--body-size: 14px;
+	--content-width: calc(var(--body-size) * 47);
 	font: caption;
 	font-size: var(--body-size);
 	--title-weight: normal;
@@ -15,7 +16,9 @@ body * {
 nav {
 	margin-left: 16px;
 	margin-right: 16px;
-	width: 650px;
+	width: var(--content-width);
+	min-width: 600px;
+	max-width: 768px;
 	margin: 12px 16px 0 16px;
 	border-bottom: 1px solid #aaa;
 	float: left;
@@ -62,7 +65,9 @@ section {
 	clear: left;
 	border: 1px solid #aaa;
 	border-top: none;
-	width: 650px;
+	width: var(--content-width);
+	min-width: 600px;
+	max-width: 768px;
 	height: 490px;
 	margin: 0 0 0 16px;
 	overflow-y: scroll;
@@ -212,4 +217,7 @@ body.dark section ul li[incog="true"]  > span.right > span {
 }
 .skip {
 	background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, #ddd 0px, #ddd 20px);
+}
+body.dark .skip {
+	background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 20px);
 }

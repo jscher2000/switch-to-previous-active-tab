@@ -1,3 +1,8 @@
+/* 
+  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  version 2.0 - Add tab skipping options and resize dialog for larger font sizes
+*/
+
 var oPrefs, oRATprefs;
 var dNow = new Date(); 
 var dMidnight = new Date(dNow.getFullYear(), dNow.getMonth(), dNow.getDate(), 0, 0, 0);
@@ -61,6 +66,18 @@ function setFormControls(){
 	} else {
 		if (document.querySelector('input[name="prefkeepopen"]').hasAttribute('checked'))
 			document.querySelector('input[name="prefkeepopen"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnSkipDiscarded){
+		document.querySelector('input[name="prefSkipDiscarded"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefSkipDiscarded"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefSkipDiscarded"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnSkipHidden){
+		document.querySelector('input[name="prefSkipHidden"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefSkipHidden"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefSkipHidden"]').removeAttribute('checked');
 	}
 	// Privacy-related preferences
 	if (oPrefs.blnIncludePrivate){
@@ -276,11 +293,23 @@ function getWindow(blnClear){
 	});
 }
 
-function getSkip(){
+function getSkip(blnUpdate){
 	browser.runtime.sendMessage({
 		want: "skip"
 	}).then((oSkip) => {
 		arrSkip = oSkip.list;
+		if (blnUpdate){
+			window.setTimeout(function(){
+				var tabs = document.querySelector('#tabglobal ul li, #tabthiswin ul');
+				for (var i=0; i<tabs.length; i++){
+					if (arrSkip.includes(tabs[i].id)){ // mark as skip list
+						tabs[i].classList.add('skip');
+					} else { // unmark
+						tabs[i].classList.remove('skip');
+					}
+				}
+			}, 500);
+		}
 	}).catch((err) => {console.log('Problem getting skip list: '+err.message);});
 }
 
@@ -312,7 +341,7 @@ function addListItem(onetab, list){
 	var elTemp = clone.querySelector('li');
 	elTemp.id = onetab;
 	if (arrSkip.includes(onetab)){
-		elTemp.className = 'skip';
+		elTemp.classList.add('skip');
 	}
 	elTemp.setAttribute('incog', oRecent[onetab].incog);
 	elTemp = clone.querySelector('span > span > img');
@@ -371,6 +400,8 @@ function gotoTab(evt){
 					// Staying in same window, update panel
 					getWindow(true);
 					getGlobal(true);
+					// v2.0
+					getSkip(true);
 				} else {
 					self.close();
 				}
@@ -387,7 +418,7 @@ function gotoTab(evt){
 getSettings();
 getGlobal(true);
 getWindow(true);
-getSkip();
+getSkip(false);
 document.querySelector('nav > ul').addEventListener('click', panelClick, false);
 document.querySelector('#tabthiswin').addEventListener('click', gotoTab, false);
 document.querySelector('#tabglobal').addEventListener('click', gotoTab, false);
@@ -429,6 +460,10 @@ function updatePrefs(evt){
 	}
 	if (document.querySelector('input[name="prefkeepopen"]').checked) oPrefs.blnKeepOpen = true;
 	else oPrefs.blnKeepOpen = false;
+	if (document.querySelector('input[name="prefSkipDiscarded"]').checked) oPrefs.blnSkipDiscarded = true;
+	else oPrefs.blnSkipDiscarded = false;
+	if (document.querySelector('input[name="prefSkipHidden"]').checked) oPrefs.blnSkipHidden = true;
+	else oPrefs.blnSkipHidden = false;
 	var prefdark = document.querySelector('select[name="prefdark"]');
 	switch (prefdark.value){
 		case 'colordark':

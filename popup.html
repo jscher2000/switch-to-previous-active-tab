@@ -30,11 +30,13 @@
 					<td style="width: 50%">
 						<p>Button Action and Scope:</p>
 						<p><label><input type="radio" name="buttonaction" value="bswitch" checked> Switch tabs</label> <label><input type="radio" name="buttonaction" value="blist"> Show list</label></p>
+						<p><span style="margin:3px 0 0 20px">&nbsp;</span><label><input type="checkbox" name="prefSkipHidden" checked> Button/key skips hidden tabs</label><br>
+							<span style="margin:3px 0 0 20px">&nbsp;</span><label><input type="checkbox" name="prefSkipDiscarded" checked> Button/key skips unloaded tabs</label></p>
 						<p><label><input type="radio" name="actionscope" value="swin" checked> Current window</label> <label><input type="radio" name="actionscope" value="sglob"> Global</label></p>
 						<p>Show URLs in List:</p>
 						<p><label><input type="radio" name="listurl" value="showurl" checked> Separate line</label> <label><input type="radio" name="listurl" value="hideurl"> Hover tooltip</label></p>
 						<p>When switching tabs:</p>
-						<p><label><input type="checkbox" name="prefkeepopen" checked> Keep list open in same window</label></p>
+						<p><label><input type="checkbox" name="prefkeepopen"> Keep list open in same window</label></p>
 					</td>
 					<td style="width: 50%">
 						<p>Popup Panel Styling:</p>
@@ -62,7 +64,7 @@
 						</select></p>
 						<p><label><input type="checkbox" name="prefboldtitle"> Bold title</label> 
 						<label><input type="checkbox" name="prefboldurl"> Bold URL</label></p>
-						<p>List area height: <input type="number" name="prefheight" step="5" value="490" min="300" max="900" style="width: 45px; transform: scale(2) translateY(-2px); margin-left: 30px; padding-top: 0; padding-bottom: 0;"> <button id="height490" title="Default height" style="transform: translateX(30px)">490</button><br>
+						<p>List area height: <input type="number" name="prefheight" step="5" value="490" min="300" max="900" style="width: 48px; transform: scale(2) translateY(-2px); margin-left: 30px; padding: 0;"> <button id="height490" title="Default height" style="transform: translateX(30px)">490</button><br>
 						(accepts 300-900 in steps of 5)</p>
 					</td>
 				</tr>

@@ -1,5 +1,5 @@
 /* 
-  Copyright 2020. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 0.3 - revise and prepopulate data structure
   version 0.4 - add window/global switch, context menu items on toolbar button
   version 0.5 - add recent tabs list (requires tabs permission)
@@ -21,6 +21,7 @@
   version 1.9 - For Reload All Tabs, option to automatically go to tabs needing attention
   version 1.9.5 - Bypass selected extension page (Panorama Tabs) for quick switch
   version 1.9.6 - Update color scheme options
+  version 2.0 - Add tab skipping for hidden and discarded tabs for quick switch
 */
 
 /**** Create and populate data structure ****/
@@ -34,7 +35,7 @@ var oPrefs = {
 	blnShowURLLine: true,		// Show URL on separate line in lists
 	blnIncludePrivate: false,	// Include private window tabs
 	blnShowFavicons: false,		// Whether to retrieve site icons on recents list
-	blnKeepOpen: true,			// When switching in the same window, keep popup open
+	blnKeepOpen: false,			// When switching in the same window, keep popup open (default switched in v2.0)
 	blnDark: undefined,			// Toggle colors to bright-on-dark (true=dark, false=light, undefined=auto)
 	blnColorbars: true,			// Use color bar background for list (true=blue, false=gray, undefined=mono)
 	blnSansSerif: false,		// Whether to use the default sans-serif font
@@ -42,6 +43,8 @@ var oPrefs = {
 	blnBoldTitle: false,		// Whether to bold the window title
 	blnBoldURL: false,			// Whether to bold the page URL
 	sectionHeight: "490px",		// Height of list panel sections
+	blnSkipDiscarded: true,		// Whether to skip discarded tabs in quick switch
+	blnSkipHidden: true,		// Whether to skip hidden tabs in quick switch
 	extPageSkipTitle: ['Panorama View'],
 	extPageSkipUrl: []
 }
@@ -118,9 +121,19 @@ function initObjects(){
 					oTabs[arrAllTabs[i].windowId] = arrWTabs;
 				}
 			}
-			// Add to skip list if needed (v1.9.5)
+			// Add extension page to skip list if needed (v1.9.5)
 			if (oPrefs.extPageSkipTitle.includes(arrAllTabs[i].title) && arrAllTabs[i].url.indexOf('moz-extension:') === 0 || 
 				oPrefs.extPageSkipUrl.includes(arrAllTabs[i].url) ) {
+				if (!('skip' in oTabs)) {
+					oTabs['skip'] = [arrAllTabs[i].id];
+				} else {
+					arrWTabs = oTabs['skip'];
+					arrWTabs.push(arrAllTabs[i].id);
+					oTabs['skip'] = arrWTabs;
+				}
+			}
+			// Add hidden/discarded tab to skip list if needed (v2.0)
+			if (oPrefs.blnSkipDiscarded && arrAllTabs[i].discarded || oPrefs.blnSkipHidden && arrAllTabs[i].hidden) {
 				if (!('skip' in oTabs)) {
 					oTabs['skip'] = [arrAllTabs[i].id];
 				} else {
@@ -237,7 +250,7 @@ browser.tabs.onActivated.addListener((info) => {
 				// active tab already is top-of-list so no action
 			}
 		}
-		// Add to skip list if needed (v1.9.5)
+		// Add extension page to skip list if needed (v1.9.5)
 		if (oPrefs.extPageSkipTitle.includes(currTab.title) && currTab.url.indexOf('moz-extension:') === 0 || 
 			oPrefs.extPageSkipUrl.includes(currTab.url) ) {
 			if (!('skip' in oTabs)) {
@@ -250,6 +263,16 @@ browser.tabs.onActivated.addListener((info) => {
 					arrWTabs.push(info.tabId);
 					oTabs['skip'] = arrWTabs;
 				}
+			}
+		}
+		// Add hidden/discarded tab to skip list if needed (v2.0)
+		if (oPrefs.blnSkipDiscarded && currTab.discarded || oPrefs.blnSkipHidden && currTab.hidden) {
+			if (!('skip' in oTabs)) {
+				oTabs['skip'] = [info.tabId];
+			} else {
+				arrWTabs = oTabs['skip'];
+				arrWTabs.push(info.tabId);
+				oTabs['skip'] = arrWTabs;
 			}
 		}
 		// Update toolbar button
@@ -390,6 +413,59 @@ browser.tabs.onAttached.addListener((id, info) => {
 	});
 });
 
+// Listen for tab updates - discarded and hidden (v2.0)
+function updateSkipList(tabId, changeInfo, oTab){
+	if (oPrefs.blnSkipDiscarded && changeInfo.discarded) { // add to skip list
+		if (!('skip' in oTabs)) {
+			oTabs['skip'] = [tabId];
+		} else {
+			var arrWTabs = oTabs['skip'];
+			if (arrWTabs.includes(tabId) === false){ // Let's not duplicate
+				arrWTabs.push(tabId);
+				oTabs['skip'] = arrWTabs;
+			}
+		}
+	} else { // remove from skip list, except skippable extension pages
+		if (('skip' in oTabs) && 
+				!(oPrefs.extPageSkipTitle.includes(oTab.title) && oTab.url.indexOf('moz-extension:') === 0 || 
+				oPrefs.extPageSkipUrl.includes(oTab.url))) {
+			arrWTabs = oTabs['skip'];
+			var pos = arrWTabs.indexOf(tabId);
+			if (pos > -1) { 
+				// remove from the array
+				arrWTabs.splice(pos, 1);
+				// store change
+				oTabs['skip'] = arrWTabs;
+			}
+		}
+	}
+	if (oPrefs.blnSkipHidden && changeInfo.hidden) { // add to skip list
+		if (!('skip' in oTabs)) {
+			oTabs['skip'] = [tabId];
+		} else {
+			var arrWTabs = oTabs['skip'];
+			if (arrWTabs.includes(tabId) === false){ // Let's not duplicate
+				arrWTabs.push(tabId);
+				oTabs['skip'] = arrWTabs;
+			}
+		}
+	} else { // remove from skip list, except skippable extension pages
+		if (('skip' in oTabs) && 
+				!(oPrefs.extPageSkipTitle.includes(oTab.title) && oTab.url.indexOf('moz-extension:') === 0 || 
+				oPrefs.extPageSkipUrl.includes(oTab.url))) {
+			arrWTabs = oTabs['skip'];
+			var pos = arrWTabs.indexOf(tabId);
+			if (pos > -1) { 
+				// remove from the array
+				arrWTabs.splice(pos, 1);
+				// store change
+				oTabs['skip'] = arrWTabs;
+			}
+		}
+	}
+}
+browser.tabs.onUpdated.addListener(updateSkipList, {properties: ["discarded", "hidden"]});
+
 // Listen for window close and purge from oTabs
 browser.windows.onRemoved.addListener((wid) => {
 	// remove the whole array for this window
@@ -449,13 +525,13 @@ browser.browserAction.onClicked.addListener((currTab) => {
 		if (oPrefs.blnSameWindow) {
 			// Current window list
 			oPrefs.popuptab = 0;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 		} else {
 			// Global list
 			oPrefs.popuptab = 1;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 		}		
@@ -574,19 +650,19 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 			break;
 		case 'bamenu_popup':
 			oPrefs.popuptab = 1;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 			break;
 		case 'bamenu_options':
 			oPrefs.popuptab = 2;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 			break;
 		case 'bamenu_reload':
 			oPrefs.popuptab = 3;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 			break;
@@ -597,7 +673,7 @@ browser.menus.onClicked.addListener((menuInfo, currTab) => {
 				// Use popup window in case browserAction is overflowed or removed
 				oPrefs.popuptab = 3;
 				browser.windows.create({
-					url: browser.extension.getURL('popup.html'),
+					url: browser.runtime.getURL('popup.html'),
 					type: 'popup', state: 'normal',
 					top: 50, width: 698, height: 588
 				});
@@ -658,8 +734,15 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.blnBoldTitle = oSettings.blnBoldTitle;
 		oPrefs.blnBoldURL = oSettings.blnBoldURL;
 		oPrefs.sectionHeight = oSettings.sectionHeight;
+		var doReinit = false;
+		if (oPrefs.blnSkipDiscarded != oSettings.blnSkipDiscarded || oPrefs.blnSkipHidden != oSettings.blnSkipHidden){
+			doReinit = true; // rebuild the arrays to fix the skip list
+		}
+		oPrefs.blnSkipDiscarded = oSettings.blnSkipDiscarded;
+		oPrefs.blnSkipHidden = oSettings.blnSkipHidden;
 		browser.storage.local.set({prefs: oPrefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
+		if (doReinit) initObjects();
 	} else if ("updateRAT" in request) {
 		// receive form updates, store to oRATprefs, and commit to storage
 		var oSettings = request["updateRAT"];
@@ -740,7 +823,7 @@ function reloadAll(currentTabId, windId, blnBypass){
 			/*  This doesn't work:
 			oPrefs.popuptab = 3;
 			oRATprefs.asknow = true;
-			browser.browserAction.setPopup({popup: browser.extension.getURL('popup.html')})
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
 			.then(browser.browserAction.openPopup())
 			.then(browser.browserAction.setPopup({popup: ''}));
 			*/
