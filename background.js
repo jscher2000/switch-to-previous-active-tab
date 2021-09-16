@@ -22,6 +22,7 @@
   version 1.9.5 - Bypass selected extension page (Panorama Tabs) for quick switch
   version 1.9.6 - Update color scheme options
   version 2.0 - Add tab skipping for hidden and discarded tabs for quick switch
+  version 2.0.1 - Remove hidden tabs from lists by default
 */
 
 /**** Create and populate data structure ****/
@@ -44,7 +45,7 @@ var oPrefs = {
 	blnBoldURL: false,			// Whether to bold the page URL
 	sectionHeight: "490px",		// Height of list panel sections
 	blnSkipDiscarded: true,		// Whether to skip discarded tabs in quick switch
-	blnSkipHidden: true,		// Whether to skip hidden tabs in quick switch
+	blnSkipHidden: true,		// Whether to skip hidden tabs in quick switch/omit from lists
 	extPageSkipTitle: ['Panorama View'],
 	extPageSkipUrl: []
 }
@@ -94,7 +95,11 @@ var oTabs = {};			// store arrays of tabId's in descending order by lastAccessed
 function initObjects(){
 	// Initialize oTabs object with up to maxTabs recent tabs per window
 	oTabs = {}; // flush
-	browser.tabs.query({}).then((arrAllTabs) => {
+	var params = {};
+	if (oPrefs.blnSkipHidden){
+		params.hidden = false;
+	}
+	browser.tabs.query(params).then((arrAllTabs) => {
 		// Sort array of tab objects in descending order by lastAccessed (numeric)
 		arrAllTabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
 		// Store tabIds to oTabs
@@ -132,8 +137,8 @@ function initObjects(){
 					oTabs['skip'] = arrWTabs;
 				}
 			}
-			// Add hidden/discarded tab to skip list if needed (v2.0)
-			if (oPrefs.blnSkipDiscarded && arrAllTabs[i].discarded || oPrefs.blnSkipHidden && arrAllTabs[i].hidden) {
+			// Add discarded tab to skip list if needed (v2.0.1)
+			if (oPrefs.blnSkipDiscarded && arrAllTabs[i].discarded) {
 				if (!('skip' in oTabs)) {
 					oTabs['skip'] = [arrAllTabs[i].id];
 				} else {
@@ -265,8 +270,8 @@ browser.tabs.onActivated.addListener((info) => {
 				}
 			}
 		}
-		// Add hidden/discarded tab to skip list if needed (v2.0)
-		if (oPrefs.blnSkipDiscarded && currTab.discarded || oPrefs.blnSkipHidden && currTab.hidden) {
+		// Add discarded tab to skip list if needed (v2.0/.1)
+		if (oPrefs.blnSkipDiscarded && currTab.discarded) {
 			if (!('skip' in oTabs)) {
 				oTabs['skip'] = [info.tabId];
 			} else {
@@ -439,15 +444,97 @@ function updateSkipList(tabId, changeInfo, oTab){
 			}
 		}
 	}
-	if (oPrefs.blnSkipHidden && changeInfo.hidden) { // add to skip list
-		if (!('skip' in oTabs)) {
-			oTabs['skip'] = [tabId];
-		} else {
-			var arrWTabs = oTabs['skip'];
-			if (arrWTabs.includes(tabId) === false){ // Let's not duplicate
-				arrWTabs.push(tabId);
-				oTabs['skip'] = arrWTabs;
+	if (oPrefs.blnSkipHidden && changeInfo.hasOwnProperty('hidden')) { // remove from tab lists (v2.0.1)
+		if (changeInfo.hidden == true){
+			// Update global tabIds array
+			var arrWTabs = oTabs['global'];
+			//   Handle case of tabId in the existing list
+			var pos = arrWTabs.indexOf(tabId);
+			if (pos > -1) { 
+				// remove from its old position
+				arrWTabs.splice(pos, 1);
+				// store change
+				oTabs['global'] = arrWTabs;
 			}
+			// Update window-specific tabIds array
+			var arrWTabs = oTabs[oTab.windowId];
+			//   Handle case of tabId in the existing list
+			var pos = arrWTabs.indexOf(tabId);
+			if (pos > -1) { 
+				// remove from its old position
+				arrWTabs.splice(pos, 1);
+				// store change
+				oTabs[oTab.windowId] = arrWTabs;
+			}
+			// Update toolbar button
+			setButton(oTab.windowId);
+		} else {
+			// it's back!!
+			// Update private window status
+			if (oTab.incognito) blnIsPrivate = true;
+			else blnIsPrivate = false;
+			// Update global tabIds array
+			var arrWTabs = oTabs['global'];
+			//   Do not re-add if it exists
+			var pos = arrWTabs.indexOf(tabId);
+			if (pos == -1) {
+				// not in list, add to front
+				arrWTabs.unshift(tabId);
+				// store change
+				oTabs['global'] = arrWTabs;
+			}
+			// Update window-specific tabIds array
+			var arrWTabs = oTabs[oTab.windowId];
+			if (!arrWTabs) {
+				//   Handle case of new window, possibly a restored window with multiple tabs, so query it
+				browser.tabs.query({windowId: oTab.windowId}).then((foundtabs) => {
+					// Sort array of tab objects in descending order by lastAccessed (numeric)
+					foundtabs.sort(function(a,b) {return (b.lastAccessed - a.lastAccessed);});
+					for (i=0; i<foundtabs.length; i++){
+						if (!(foundtabs[i].windowId in oTabs)) {
+							oTabs[foundtabs[i].windowId] = [foundtabs[i].id];
+						} else {
+							arrWTabs = oTabs[foundtabs[i].windowId];
+							if (arrWTabs.length < oPrefs.maxTabs) {
+								arrWTabs.push(foundtabs[i].id);
+								oTabs[foundtabs[i].windowId] = arrWTabs;
+							}
+						}
+					}
+				});
+			} else {
+				//   Do not re-add if it exists
+				var pos = arrWTabs.indexOf(tabId);
+				if (pos == -1) {
+					// not in list, add to front
+					arrWTabs.unshift(tabId);
+					// check length and trim off the last if too long
+					if (arrWTabs.length > oPrefs.maxTabs) arrWTabs.pop();
+					// store change
+					oTabs[oTab.windowId] = arrWTabs;
+				}
+			}
+			// fix sort order
+			browser.tabs.query({}).then((arrAllTabs) => {
+				// Update window-specific tabIds array
+				var arrWTabs = oTabs[oTab.windowId];
+				arrWTabs.sort(function(a,b) {
+					var aObj = arrAllTabs.find(oT => oT.id === a);
+					var bObj = arrAllTabs.find(oT => oT.id === b);
+					return (bObj.lastAccessed - aObj.lastAccessed);
+				});
+				// store sorted list
+				oTabs[oTab.windowId] = arrWTabs;
+				// Update global tabIds array
+				arrWTabs = oTabs['global'];
+				arrWTabs.sort(function(a,b) {
+					var aObj = arrAllTabs.find(oT => oT.id === a);
+					var bObj = arrAllTabs.find(oT => oT.id === b);
+					return (bObj.lastAccessed - aObj.lastAccessed);
+				});
+				// store sorted list
+				oTabs['global'] = arrWTabs;
+			});
 		}
 	} else { // remove from skip list, except skippable extension pages
 		if (('skip' in oTabs) && 
