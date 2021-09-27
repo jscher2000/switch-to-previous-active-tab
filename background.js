@@ -23,6 +23,7 @@
   version 1.9.6 - Update color scheme options
   version 2.0 - Add tab skipping for hidden and discarded tabs for quick switch
   version 2.0.1 - Remove hidden tabs from lists by default
+  version 2.0.2 - Bug fix for discarded tabs at startup
 */
 
 /**** Create and populate data structure ****/
@@ -59,6 +60,8 @@ browser.storage.local.get("prefs").then((results) => {
 			}
 		}
 	}
+	// version 2.0.2 (this was running asynchronously with default preferences in 2.0.1 and earlier)
+	initObjects();
 }).catch((err) => {console.log('Error retrieving "prefs" from storage: '+err.message);});
 
 // Preferences for RELOAD ALL TABS
@@ -180,8 +183,6 @@ function initObjects(){
 		})
 	});
 }
-
-initObjects();
 
 /**** Set up tab and window listeners to keep the data fresh ****/
 var blnIsPrivate = false;
