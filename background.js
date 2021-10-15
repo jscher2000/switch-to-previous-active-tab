@@ -24,6 +24,7 @@
   version 2.0 - Add tab skipping for hidden and discarded tabs for quick switch
   version 2.0.1 - Remove hidden tabs from lists by default
   version 2.0.2 - Bug fix for discarded tabs at startup
+  version 2.0.3 - Bug fix for tabs discarded by extensions
 */
 
 /**** Create and populate data structure ****/
@@ -421,30 +422,34 @@ browser.tabs.onAttached.addListener((id, info) => {
 
 // Listen for tab updates - discarded and hidden (v2.0)
 function updateSkipList(tabId, changeInfo, oTab){
-	if (oPrefs.blnSkipDiscarded && changeInfo.discarded) { // add to skip list
-		if (!('skip' in oTabs)) {
-			oTabs['skip'] = [tabId];
-		} else {
-			var arrWTabs = oTabs['skip'];
-			if (arrWTabs.includes(tabId) === false){ // Let's not duplicate
-				arrWTabs.push(tabId);
-				oTabs['skip'] = arrWTabs;
+	// Discarded tabs: add/remove from the oTabs.skip array
+	if (oPrefs.blnSkipDiscarded && changeInfo.hasOwnProperty('discarded')) { // process for skip list
+		if (changeInfo.discarded == true){ // newly discarded - add to list
+			if (!('skip' in oTabs)) {
+				oTabs['skip'] = [tabId];
+			} else {
+				var arrWTabs = oTabs['skip'];
+				if (arrWTabs.includes(tabId) === false){ // Let's not duplicate
+					arrWTabs.push(tabId);
+					oTabs['skip'] = arrWTabs;
+				}
 			}
-		}
-	} else { // remove from skip list, except skippable extension pages
-		if (('skip' in oTabs) && 
-				!(oPrefs.extPageSkipTitle.includes(oTab.title) && oTab.url.indexOf('moz-extension:') === 0 || 
-				oPrefs.extPageSkipUrl.includes(oTab.url))) {
-			arrWTabs = oTabs['skip'];
-			var pos = arrWTabs.indexOf(tabId);
-			if (pos > -1) { 
-				// remove from the array
-				arrWTabs.splice(pos, 1);
-				// store change
-				oTabs['skip'] = arrWTabs;
+		} else { // newly restored - remove from list, except skippable extension pages
+			if (('skip' in oTabs) && 
+					!(oPrefs.extPageSkipTitle.includes(oTab.title) && oTab.url.indexOf('moz-extension:') === 0 || 
+					oPrefs.extPageSkipUrl.includes(oTab.url))) {
+				arrWTabs = oTabs['skip'];
+				var pos = arrWTabs.indexOf(tabId);
+				if (pos > -1) { 
+					// remove from the array
+					arrWTabs.splice(pos, 1);
+					// store change
+					oTabs['skip'] = arrWTabs;
+				}
 			}
 		}
 	}
+	// Hidden tabs: add/remove from the oTabs window and oTabs.global arrays
 	if (oPrefs.blnSkipHidden && changeInfo.hasOwnProperty('hidden')) { // remove from tab lists (v2.0.1)
 		if (changeInfo.hidden == true){
 			// Update global tabIds array
@@ -536,19 +541,6 @@ function updateSkipList(tabId, changeInfo, oTab){
 				// store sorted list
 				oTabs['global'] = arrWTabs;
 			});
-		}
-	} else { // remove from skip list, except skippable extension pages
-		if (('skip' in oTabs) && 
-				!(oPrefs.extPageSkipTitle.includes(oTab.title) && oTab.url.indexOf('moz-extension:') === 0 || 
-				oPrefs.extPageSkipUrl.includes(oTab.url))) {
-			arrWTabs = oTabs['skip'];
-			var pos = arrWTabs.indexOf(tabId);
-			if (pos > -1) { 
-				// remove from the array
-				arrWTabs.splice(pos, 1);
-				// store change
-				oTabs['skip'] = arrWTabs;
-			}
 		}
 	}
 }
@@ -894,7 +886,7 @@ function reloadAll(currentTabId, windId, blnBypass){
 		}
 		// Deal with asking about playing tabs TODO
 		if (arrAudibleTabs.length > 0){
-			console.log(arrAudibleTabs);
+			//console.log(arrAudibleTabs);
 			/*  This doesn't work:
 			if (arrAudibleTabs.length == 1){
 				if(window.confirm('Reload 1 tab with playing media?')){
@@ -958,7 +950,7 @@ async function doQueuedReload(index){
 	if (!task){
 		// exhausted the queue, clear it if all tasks are done
 		if (intLoading === 0){
-			console.log('flushing arrQueue() and loadMonitor');
+			//console.log('flushing arrQueue() and loadMonitor');
 			arrQueue = [];
 			browser.tabs.onUpdated.removeListener(loadMonitor);
 		}
