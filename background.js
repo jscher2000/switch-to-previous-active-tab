@@ -1,5 +1,5 @@
 /* 
-  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 0.3 - revise and prepopulate data structure
   version 0.4 - add window/global switch, context menu items on toolbar button
   version 0.5 - add recent tabs list (requires tabs permission)
@@ -25,6 +25,7 @@
   version 2.0.1 - Remove hidden tabs from lists by default
   version 2.0.2 - Bug fix for discarded tabs at startup
   version 2.0.3 - Bug fix for tabs discarded by extensions
+  version 2.1 - Optional "Go to Tab" keyboard shortcuts
 */
 
 /**** Create and populate data structure ****/
@@ -48,6 +49,9 @@ var oPrefs = {
 	sectionHeight: "490px",		// Height of list panel sections
 	blnSkipDiscarded: true,		// Whether to skip discarded tabs in quick switch
 	blnSkipHidden: true,		// Whether to skip hidden tabs in quick switch/omit from lists
+	blnActivatePinned: false,	// Whether go-to-tab keyboard shortcut activates pinned tabs (false = only regular tabs) v2.1
+	blnActivateHidden: false,	// Whether go-to-tab keyboard shortcut activates hidden tabs v2.1
+	blnActivateDiscarded: true,	// Whether go-to-tab keyboard shortcut activates discarded tabs v2.1
 	extPageSkipTitle: ['Panorama View'],
 	extPageSkipUrl: []
 }
@@ -1017,5 +1021,32 @@ browser.commands.onCommand.addListener(strName => {
 		browser.windows.getCurrent().then((currWin) => {
 			doSwitch(currWin.id, currWin.id);
 		})
+	}
+	if (strName.indexOf('activate-tab-') === 0){ // v2.1 Go to Tab by number
+		// Extract requested tab number
+		var tabNum = parseInt(strName.slice(-1));
+		// Generate index of tabs based on user preferences
+		var params = {
+			currentWindow: true
+		};
+		if (oPrefs.blnActivatePinned == false){
+			params.pinned = false;
+		}
+		if (oPrefs.blnActivateHidden == false){
+			params.hidden = false;
+		}
+		if (oPrefs.blnActivateDiscarded == false){
+			params.discarded = false;
+		}
+		browser.tabs.query(params).then((arrFoundTabs) => {
+			if (tabNum <= arrFoundTabs.length){
+				// Sort array of tab objects in ascending order by tab index, just in case
+				arrFoundTabs.sort(function(a,b) {return (a.index - b.index);});
+				// Activate the tabNumth tab in arrFoundTabs
+				browser.tabs.update(arrFoundTabs[tabNum - 1].id, {active: true});
+			} else {
+				// We can't do what the user requested -- what should we do instead? TODO
+			}
+		});
 	}
 })

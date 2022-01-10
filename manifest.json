@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "2.0.3",
+	"version": "2.1",
 	"applications":{
 		"gecko": {
 			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
@@ -34,12 +34,39 @@
 		"64": "icons/previousactivetab.png"
 	},
 	"commands": {
-	  "previous-tab": {
-		"suggested_key": {
-		  "default": "Alt+Shift+Left",
-		  "mac": "MacCtrl+Shift+Left"
+		"previous-tab": {
+			"suggested_key": {
+				"default": "Alt+Shift+Left",
+				"mac": "MacCtrl+Shift+Left"
+			},
+			"description": "Switch to previous active tab"
 		},
-		"description": "Switch to previous active tab"
-	  }
+		"activate-tab-1": {
+			"description": "Go to 1st tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-2": {
+			"description": "Go to 2nd tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-3": {
+			"description": "Go to 3rd tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-4": {
+			"description": "Go to 4th tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-5": {
+			"description": "Go to 5th tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-6": {
+			"description": "Go to 6th tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-7": {
+			"description": "Go to 7th tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-8": {
+			"description": "Go to 8th tab (skip pinned, hidden, unloaded, per options)"
+		},
+		"activate-tab-9": {
+			"description": "Go to 9th tab (skip pinned, hidden, unloaded, per options)"
+		}
 	}
 }

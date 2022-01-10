@@ -1,6 +1,7 @@
 /* 
-  Copyright 2021. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 2.0 - Add tab skipping options and resize dialog for larger font sizes
+  version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
 */
 
 var oPrefs, oRATprefs;
@@ -78,6 +79,24 @@ function setFormControls(){
 	} else {
 		if (document.querySelector('input[name="prefSkipHidden"]').hasAttribute('checked'))
 			document.querySelector('input[name="prefSkipHidden"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnActivatePinned){ //v2.1
+		document.querySelector('input[name="prefActivatePinned"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefActivatePinned"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefActivatePinned"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnActivateHidden){ //v2.1
+		document.querySelector('input[name="prefActivateHidden"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefActivateHidden"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefActivateHidden"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnActivateDiscarded){ //v2.1
+		document.querySelector('input[name="prefActivateDiscarded"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="prefActivateDiscarded"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefActivateDiscarded"]').removeAttribute('checked');
 	}
 	// Privacy-related preferences
 	if (oPrefs.blnIncludePrivate){
@@ -435,6 +454,10 @@ document.querySelector('#height490').addEventListener('click', revertHeight, fal
 document.querySelector('#btnReinit').addEventListener('click', doReinit, false);
 document.querySelector('#btnReloSave').addEventListener('click', updateRATPrefs, false);
 document.querySelector('#btnReloReset').addEventListener('click', setRATFormControls, false);
+document.querySelector('#shortcuthelplink').addEventListener('click', function(evt){
+	// We want to close the dialog after loading the help page
+	window.setTimeout(function(){self.close();}, 100);
+}, false);
 
 function updatePrefs(evt){
 	// Update oPrefs
@@ -464,6 +487,12 @@ function updatePrefs(evt){
 	else oPrefs.blnSkipDiscarded = false;
 	if (document.querySelector('input[name="prefSkipHidden"]').checked) oPrefs.blnSkipHidden = true;
 	else oPrefs.blnSkipHidden = false;
+	if (document.querySelector('input[name="prefActivatePinned"]').checked) oPrefs.blnActivatePinned = true; //v2.1
+	else oPrefs.blnActivatePinned = false;
+	if (document.querySelector('input[name="prefActivateHidden"]').checked) oPrefs.blnActivateHidden = true; //v2.1
+	else oPrefs.blnActivateHidden = false;
+	if (document.querySelector('input[name="prefActivateDiscarded"]').checked) oPrefs.blnActivateDiscarded = true; //v2.1
+	else oPrefs.blnActivateDiscarded = false;
 	var prefdark = document.querySelector('select[name="prefdark"]');
 	switch (prefdark.value){
 		case 'colordark':

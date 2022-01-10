@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link rel="stylesheet" href="popup.css" type="text/css">
-<title>Recent Tabs Popup v2.0.1</title>
+<title>Recent Tabs Popup v2.1</title>
 </head>
 <body>
 <nav>
@@ -66,6 +66,11 @@
 						<label><input type="checkbox" name="prefboldurl"> Bold URL</label></p>
 						<p>List area height: <input type="number" name="prefheight" step="5" value="490" min="300" max="900" style="width: 48px; transform: scale(2) translateY(-2px); margin-left: 30px; padding: 0;"> <button id="height490" title="Default height" style="transform: translateX(30px)">490</button><br>
 						(accepts 300-900 in steps of 5)</p>
+						<p>Go To Tab shortcuts can activate: <br>
+							<label><input type="checkbox" name="prefActivatePinned"> pinned</label>
+							<label><input type="checkbox" name="prefActivateHidden"> hidden</label>
+							<label><input type="checkbox" name="prefActivateDiscarded"> unloaded</label> tabs<br>
+							<a id="shortcuthelplink" href="https://support.mozilla.org/kb/manage-extension-shortcuts-firefox" target="_blank">How to assign shortcuts</a></p>
 					</td>
 				</tr>
 				<tr>
