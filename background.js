@@ -26,6 +26,7 @@
   version 2.0.2 - Bug fix for discarded tabs at startup
   version 2.0.3 - Bug fix for tabs discarded by extensions
   version 2.1 - Optional "Go to Tab" keyboard shortcuts
+  version 2.1.1 - bug fix for Go To Tab options that weren't getting saved
 */
 
 /**** Create and populate data structure ****/
@@ -824,6 +825,9 @@ function handleMessage(request, sender, sendResponse) {
 		}
 		oPrefs.blnSkipDiscarded = oSettings.blnSkipDiscarded;
 		oPrefs.blnSkipHidden = oSettings.blnSkipHidden;
+		oPrefs.blnActivatePinned = oSettings.blnActivatePinned;
+		oPrefs.blnActivateHidden = oSettings.blnActivateHidden;
+		oPrefs.blnActivateDiscarded = oSettings.blnActivateDiscarded;
 		browser.storage.local.set({prefs: oPrefs})
 			.catch((err) => {console.log('Error on browser.storage.local.set(): '+err.message);});
 		if (doReinit) initObjects();

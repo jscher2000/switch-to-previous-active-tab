@@ -1,6 +1,7 @@
+/* v2.1.1 */
 body {
 	margin: 0;
-	padding: 6px 4px 16px 0;
+	padding: 4px 4px 10px 0;
 	background-color: #eee;
 	--body-size: 14px;
 	--content-width: calc(var(--body-size) * 47);
@@ -14,12 +15,10 @@ body * {
 }
 /* Tabs */
 nav {
-	margin-left: 16px;
-	margin-right: 16px;
 	width: var(--content-width);
 	min-width: 600px;
 	max-width: 768px;
-	margin: 12px 16px 0 16px;
+	margin: 8px 16px 0 16px;
 	border-bottom: 1px solid #aaa;
 	float: left;
 }
@@ -162,10 +161,6 @@ section ul li[incog="true"]  > span.right > span {
 	margin-top: 0.75em;
 	margin-bottom: 0;
 }
-#frmOpts tr:first-of-type td p:first-of-type,
-#frmReload tr:first-of-type td p:first-of-type {
-	margin-top: 1em;
-}
 #frmReload select {
 	width: 300px;
 	font-family: sans-serif;
@@ -179,6 +174,12 @@ section ul li[incog="true"]  > span.right > span {
 	color: #aaa;
 }
 
+select[name="prefdark"]{
+	max-width: 4.2em;
+}
+select[name="colorbars"]{
+	max-width: 8.7em;
+}
 body.dark {
 	background-color: #000;
 	color: #eee;
