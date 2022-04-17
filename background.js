@@ -27,6 +27,7 @@
   version 2.0.3 - Bug fix for tabs discarded by extensions
   version 2.1 - Optional "Go to Tab" keyboard shortcuts
   version 2.1.1 - bug fix for Go To Tab options that weren't getting saved
+  version 2.2 - handle opening Options panel from Options page
 */
 
 /**** Create and populate data structure ****/
@@ -851,6 +852,13 @@ function handleMessage(request, sender, sendResponse) {
 		if (request.reinit){
 			initObjects();
 		}
+	} else if ("launchOptions" in request) {
+		oPrefs.popuptab = 2;
+		browser.windows.create({
+			url: browser.runtime.getURL('popup.html'),
+			type: 'popup', state: 'normal',
+			top: 50, width: 698, height: 588
+		});
 	}
 }
 browser.runtime.onMessage.addListener(handleMessage);

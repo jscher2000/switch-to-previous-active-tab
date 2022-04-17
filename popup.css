@@ -1,4 +1,4 @@
-/* v2.1.1 */
+/* v2.2 */
 body {
 	margin: 0;
 	padding: 4px 4px 10px 0;
@@ -142,7 +142,7 @@ section ul li[incog="true"]  > span.right > span {
 	background-size: 42px;
 }
 #panels.compact section ul li[incog="true"]  > span.right > span {
-	padding-left: 14px;
+	padding-left: 16px;
 	background-size: 16px;
 }
 #panels {
@@ -228,4 +228,49 @@ body.dark .skip {
 }
 body.dark #shortcuthelplink, body.dark #shortcuthelplink:visited {
 	color: #0ee;
+}
+/* v2.2 Container Indicator */
+span.right > span[tabcontext] {
+	color: var(--identity-color);
+	fill: var(--identity-color);
+}
+.context-label, .context-icon {
+	display: inline-block;
+	margin-block-start: auto;
+	margin-block-end: auto;
+}
+.context-label {
+	font-size: calc(1em - 2px);
+	vertical-align: top;
+	width: auto;
+	max-width: 80px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: clip;
+	padding: 0 2px;
+}
+.context-label:hover {
+	max-width: unset;
+	overflow: visible;
+	background-color: #e8e8e8;
+}
+#panels.compact .context-label {
+	display: none;
+}
+body.dark .context-label:hover {
+	background-color: #222;
+}
+.context-icon {
+	height: 1em;
+	width: 1em;
+	background-size: contain;
+	margin-left: 2px;
+	background-image: var(--identity-icon);
+	fill: currentColor;
+	/* The following filter is from the Firefox Multi-Account Containers extension */
+	filter: url('/img/filters.svg#fill');
+}
+#panels.compact section ul li:not([incog="true"])  > span.right > .context-icon {
+	display: inline; 
+	margin-left: 0;
 }

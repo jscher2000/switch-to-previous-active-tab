@@ -2,6 +2,7 @@
   Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 2.0 - Add tab skipping options and resize dialog for larger font sizes
   version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
+  version 2.2 - Container indicator, hide extension page URL when opened in a window
 */
 
 var oPrefs, oRATprefs;
@@ -11,6 +12,7 @@ var oRecent = {};
 var reinitPrivate = false;
 var reinitFavicons = false;
 var arrSkip = [];
+var self = browser.runtime.getURL('popup.html');
 
 function getSettings(){
 	browser.runtime.sendMessage({
@@ -241,7 +243,7 @@ function getGlobal(blnClear){
 			} else {
 				browser.tabs.get(arrWTabs[j]).then((currTab) => {
 					if (!(currTab.id in oRecent)){
-						oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null};
+						oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null};
 					}
 					oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 					oRecent[currTab.id].title = currTab.title;
@@ -249,6 +251,7 @@ function getGlobal(blnClear){
 					oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 					oRecent[currTab.id].incog = currTab.incognito;
 					oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
+					oRecent[currTab.id].tabcontext = currTab.cookieStoreId; // v2.2
 					if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
 						addListItem(currTab.id, dest);
 					}
@@ -256,6 +259,8 @@ function getGlobal(blnClear){
 			}
 			if (j==29) break;
 		}
+		// v2.2. add Container Indicator (some delay required)
+		window.setTimeout(function(){addContainer('#tabglobal ul');}, 250);
 	}).catch((err) => {console.log('Problem getting global: '+err.message);});
 }
 
@@ -286,7 +291,7 @@ function getWindow(blnClear){
 								document.getElementById('twin').setAttribute('disabled', 'disabled');
 							}
 							if (!(currTab.id in oRecent)){
-								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null};
+								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null};
 							}
 							oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 							oRecent[currTab.id].title = currTab.title;
@@ -294,6 +299,7 @@ function getWindow(blnClear){
 							oRecent[currTab.id].icon = (currTab.favIconUrl) ? currTab.favIconUrl : "icons/defaultFavicon.svg";
 							oRecent[currTab.id].incog = currTab.incognito;
 							oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
+							oRecent[currTab.id].tabcontext = currTab.cookieStoreId; // v2.2
 							if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
 								addListItem(currTab.id, dest);
 							}
@@ -301,6 +307,8 @@ function getWindow(blnClear){
 					}
 					if (j==14 && oPrefs.blnShowURLLine == true) break;
 				}
+				// v2.2. add Container Indicator (some delay required)
+				window.setTimeout(function(){addContainer('#tabthiswin ul');}, 250);
 			}
 		}).catch((err) => {console.log('Problem getting window: '+err.message);});
 		if (wind.incognito){
@@ -354,6 +362,9 @@ function fixPath(tabdata){
 }
 
 function addListItem(onetab, list){
+	// v2.2 Do not list the popup
+	if (oRecent[onetab].url.indexOf(self) > -1) return;
+	// Build new item
 	var newLI = document.getElementById('newLI');
 	var clone = document.importNode(newLI.content, true);
 	// Populate the template
@@ -377,8 +388,36 @@ function addListItem(onetab, list){
 	}
 	elTemp = clone.querySelector('span.right');
 	elTemp.insertBefore(document.createTextNode(oRecent[onetab].time), elTemp.firstChild);
+	// v2.2 Store the tab context for the Container Indicator
+	elTemp = clone.querySelector('span[tabcontext]');
+	if (oRecent[onetab].tabcontext == 'firefox-default') elTemp.remove();
+	else elTemp.setAttribute('tabcontext', oRecent[onetab].tabcontext);
 	// Add the item to the list
 	list.appendChild(clone);
+}
+
+function addContainer(listSelector){
+	var spans = document.querySelectorAll(listSelector + ' span[tabcontext]');
+	browser.contextualIdentities.query({}).then((identities) => {
+		if (!identities.length) return;
+		var newident = document.getElementById('identity');
+		for (var k=0; k<spans.length; k++){
+			var ident = identities.find(objIdent => objIdent.cookieStoreId === spans[k].getAttribute('tabcontext'));
+			if (ident){
+				// set container styles
+				if (ident.color == "toolbar"){
+					spans[k].setAttribute('style', '--identity-color: ' + ident.color + '; --identity-icon: url(' + ident.iconUrl + ');');
+				} else {
+					spans[k].setAttribute('style', '--identity-color: ' + ident.colorCode + '; --identity-icon: url(' + ident.iconUrl + ');');
+				}
+				// insert tags, set label text
+				var clone = document.importNode(newident.content, true);
+				clone.querySelector('.context-label').textContent = ident.name;
+				clone.querySelector('.context-icon').setAttribute('title', ident.name);
+				spans[k].appendChild(clone);
+			}
+		}
+	}).catch((err) => {console.log(err)});
 }
 
 /**** Event handlers ****/

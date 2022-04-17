@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "2.1.1",
+	"version": "2.2",
 	"applications":{
 		"gecko": {
 			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
@@ -26,7 +26,8 @@
 	"permissions": [
 		"menus",
 		"tabs",
-		"storage"
+		"storage",
+		"contextualIdentities"
 	],
 	"icons": {
 		"16": "icons/lasttab-16.png",
@@ -68,5 +69,9 @@
 		"activate-tab-9": {
 			"description": "Go to 9th tab (skip pinned, hidden, unloaded, per options)"
 		}
+	},
+	"options_ui": {
+		"page": "options.html",
+		"browser_style": true
 	}
 }
