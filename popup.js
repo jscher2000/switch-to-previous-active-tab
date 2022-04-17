@@ -3,6 +3,7 @@
   version 2.0 - Add tab skipping options and resize dialog for larger font sizes
   version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
   version 2.2 - Container indicator, hide extension page URL when opened in a window
+  version 2.2.1 - Bug fix
 */
 
 var oPrefs, oRATprefs;
@@ -12,7 +13,7 @@ var oRecent = {};
 var reinitPrivate = false;
 var reinitFavicons = false;
 var arrSkip = [];
-var self = browser.runtime.getURL('popup.html');
+var ownUrl = browser.runtime.getURL('popup.html');
 
 function getSettings(){
 	browser.runtime.sendMessage({
@@ -363,7 +364,7 @@ function fixPath(tabdata){
 
 function addListItem(onetab, list){
 	// v2.2 Do not list the popup
-	if (oRecent[onetab].url.indexOf(self) > -1) return;
+	if (oRecent[onetab].url.indexOf(ownUrl) > -1) return;
 	// Build new item
 	var newLI = document.getElementById('newLI');
 	var clone = document.importNode(newLI.content, true);
