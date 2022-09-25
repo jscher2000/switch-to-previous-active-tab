@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "2.2.1",
+	"version": "2.3",
 	"applications":{
 		"gecko": {
 			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
@@ -41,6 +41,13 @@
 				"mac": "MacCtrl+Shift+Left"
 			},
 			"description": "Switch to previous active tab"
+		},
+		"show-list": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+Down",
+				"mac": "MacCtrl+Shift+Down"
+			},
+			"description": "Open list drop-down (select window or global in the Options)"
 		},
 		"activate-tab-1": {
 			"description": "Go to 1st tab (skip pinned, hidden, unloaded, per options)"

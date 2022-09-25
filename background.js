@@ -28,6 +28,7 @@
   version 2.1 - Optional "Go to Tab" keyboard shortcuts
   version 2.1.1 - bug fix for Go To Tab options that weren't getting saved
   version 2.2 - handle opening Options panel from Options page
+  version 2.3 - Keyboard shortcut for opening the browser action
 */
 
 /**** Create and populate data structure ****/
@@ -1033,6 +1034,21 @@ browser.commands.onCommand.addListener(strName => {
 		browser.windows.getCurrent().then((currWin) => {
 			doSwitch(currWin.id, currWin.id);
 		})
+	}
+	if (strName === 'show-list'){
+		if (oPrefs.blnSameWindow) {
+			// Current window list
+			oPrefs.popuptab = 0;
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
+		} else {
+			// Global list
+			oPrefs.popuptab = 1;
+			browser.browserAction.setPopup({popup: browser.runtime.getURL('popup.html')})
+			.then(browser.browserAction.openPopup())
+			.then(browser.browserAction.setPopup({popup: ''}));
+		}
 	}
 	if (strName.indexOf('activate-tab-') === 0){ // v2.1 Go to Tab by number
 		// Extract requested tab number
