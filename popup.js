@@ -4,6 +4,7 @@
   version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
   version 2.2 - Container indicator, hide extension page URL when opened in a window
   version 2.2.1 - Bug fix
+  version 2.4 - Windows and Global lists can be navigated using arrow keys and Enter
 */
 
 var oPrefs, oRATprefs;
@@ -21,7 +22,7 @@ function getSettings(){
 	}).then((oSettings) => {
 		oPrefs = oSettings.response;
 		oRATprefs = oSettings.RAT;		
-		// Change tabs if needed
+		// Change tabs if needed (default tab is Global)
 		if (oPrefs.popuptab != 1){
 			panelSwitch(document.querySelectorAll('nav ul li')[oPrefs.popuptab]);
 		}
@@ -260,8 +261,16 @@ function getGlobal(blnClear){
 			}
 			if (j==29) break;
 		}
-		// v2.2. add Container Indicator (some delay required)
+		// v2.2 - Add Container Indicator (some delay required)
 		window.setTimeout(function(){addContainer('#tabglobal ul');}, 250);
+		// v2.4 - Focus first list item on Global if it's the displayed panel
+		var visTab = document.querySelector('nav ul li.vis');
+		if (visTab && visTab.getAttribute('panel') == 'tabglobal'){
+			window.setTimeout(function(){
+				var items = document.getElementById('tabglobal').querySelectorAll('li');
+				if (items.length > 0) items[0].classList.add('focused');
+			}, 250);
+		}
 	}).catch((err) => {console.log('Problem getting global: '+err.message);});
 }
 
@@ -308,8 +317,14 @@ function getWindow(blnClear){
 					}
 					if (j==14 && oPrefs.blnShowURLLine == true) break;
 				}
-				// v2.2. add Container Indicator (some delay required)
+				// v2.2 - Add Container Indicator (some delay required)
 				window.setTimeout(function(){addContainer('#tabthiswin ul');}, 250);
+				// v2.4 - Focus first list item on Window if it's the displayed panel
+				var visTab = document.querySelector('nav ul li.vis');
+				if (visTab && visTab.getAttribute('panel') == 'tabthiswin'){
+					var items = document.getElementById('tabthiswin').querySelectorAll('li');
+					if (items.length > 0) items[0].classList.add('focused');
+				}
 			}
 		}).catch((err) => {console.log('Problem getting window: '+err.message);});
 		if (wind.incognito){
@@ -435,10 +450,20 @@ function panelSwitch(tab){
 	for (var i=0; i<tabs.length; i++){
 		if (tabs[i].id == tab.id){
 			tabs[i].className = 'vis';
-			document.getElementById(tabs[i].getAttribute('panel')).style.display = 'block';
+			// Panel update
+			var activePanel = document.getElementById(tabs[i].getAttribute('panel'));
+			activePanel.style.display = 'block';
+			if (activePanel.id == 'tabthiswin' || activePanel.id == 'tabglobal'){
+				var items = activePanel.querySelectorAll('li');
+				if (items.length > 0) items[0].classList.add('focused');
+			}
 		} else {
 			tabs[i].className = '';
-			document.getElementById(tabs[i].getAttribute('panel')).style.display = '';
+			// Panel update
+			var inactivePanel = document.getElementById(tabs[i].getAttribute('panel'));
+			inactivePanel.style.display = '';
+			var focused = inactivePanel.querySelector('.focused');
+			if (focused) focused.classList.remove('focused');
 		}
 	}
 }
@@ -474,6 +499,85 @@ function gotoTab(evt){
 	});
 }
 
+var focusmuted = true;
+function kbdNav(evt){
+	// Handle keyup events for up and down arrow and Enter/Return for a specific list
+	var listKeys = ['ArrowUp', 'ArrowDown', 'Enter'];
+	if (listKeys.includes(evt.key)){
+		// Check whether one of the lists is active
+		var visPanelId = document.querySelector('nav ul li.vis').getAttribute('panel');
+		if (visPanelId == 'tabthiswin' || visPanelId == 'tabglobal'){
+			// Arrow key: move the focus ring; Enter/Return: switch tab
+			var visPanel = document.getElementById(visPanelId);
+			var focused = visPanel.querySelector('.focused');
+			if (focused == null){
+				// Set initial selection
+				var items = visPanel.querySelectorAll('li');
+				if (items.length > 0) items[0].classList.add('focused');
+			} else {
+				// Move selection or switch tab
+				if (evt.key == 'ArrowDown'){
+					if (focused.nextElementSibling){
+						focused.classList.remove('focused');
+						focused.nextElementSibling.classList.add('focused');
+					}
+					if (focusmuted){
+						document.getElementById('panels').classList.remove('mutedfocus');
+						focusmuted = false;
+					}
+				}
+				if (evt.key == 'ArrowUp'){
+					if (focused.previousElementSibling){
+						focused.classList.remove('focused');
+						focused.previousElementSibling.classList.add('focused');
+					}
+					if (focusmuted){
+						document.getElementById('panels').classList.remove('mutedfocus');
+						focusmuted = false;
+					}
+				}
+				if (evt.key == 'Enter'){ // Switch to tab
+					browser.tabs.update(parseInt(focused.id), {active:true}).then((newTab) => {
+						browser.windows.getCurrent().then((wind) => {
+							if (newTab.windowId == wind.id){
+								if (oPrefs.blnKeepOpen){
+									// Staying in same window, update panel
+									getWindow(true);
+									getGlobal(true);
+									// v2.0
+									getSkip(true);
+								} else {
+									self.close();
+								}
+							} else {
+								// Change window
+								browser.windows.update(newTab.windowId, {focused: true});
+								// Close panel => BUGGY, FOCUS SHIFTS, DISABLE FOR NOW v1.8.2
+								//self.close();
+							}
+						});
+					});
+				}
+			}
+		}
+	}
+	// Handle global keys
+	var globalKeys = ['ArrowLeft', 'ArrowRight'];
+	if (globalKeys.includes(evt.key)){
+		// Left and right arrow switch among the four panels
+		var visTab = document.querySelector('nav ul li.vis');
+		if (evt.key == 'ArrowLeft'){
+			var prevTab = visTab.previousElementSibling;
+			if (prevTab && !prevTab.hasAttribute('disabled')) panelSwitch(prevTab);
+		}
+		if (evt.key == 'ArrowRight'){
+			var nextTab = visTab.nextElementSibling;
+			if (nextTab && !nextTab.hasAttribute('disabled')) panelSwitch(nextTab);
+		}
+	}
+}
+
+
 getSettings();
 getGlobal(true);
 getWindow(true);
@@ -498,6 +602,7 @@ document.querySelector('#shortcuthelplink').addEventListener('click', function(e
 	// We want to close the dialog after loading the help page
 	window.setTimeout(function(){self.close();}, 100);
 }, false);
+document.body.addEventListener('keyup', kbdNav, false);
 
 function updatePrefs(evt){
 	// Update oPrefs

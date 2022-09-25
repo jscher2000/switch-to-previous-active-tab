@@ -1,4 +1,4 @@
-/* v2.2 */
+/* v2.4 */
 body {
 	margin: 0;
 	padding: 4px 4px 10px 0;
@@ -98,6 +98,18 @@ body:not(.gray):not(.blue) section ul li:not(:last-of-type) { /* Added 1.9.6 */
 }
 section ul li:first-of-type {
 	cursor: unset;
+}
+section ul li.focused {
+	border-radius: 8px;
+	box-shadow: inset 0 0 3px 3px rgba(97, 181, 255, 0.5);  
+}
+#panels.mutedfocus section ul li.focused {
+	border-radius: 8px;
+	box-shadow: inset 0 0 3px 3px #ccc;  
+}
+body.dark #panels.mutedfocus section ul li.focused {
+	border-radius: 8px;
+	box-shadow: inset 0 0 3px 3px #888;  
 }
 section ul li > span:not(.right) {
 	position: absolute;
