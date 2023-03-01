@@ -1,5 +1,5 @@
 /* 
-  Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2023. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 0.3 - revise and prepopulate data structure
   version 0.4 - add window/global switch, context menu items on toolbar button
   version 0.5 - add recent tabs list (requires tabs permission)
@@ -29,6 +29,7 @@
   version 2.1.1 - bug fix for Go To Tab options that weren't getting saved
   version 2.2 - handle opening Options panel from Options page
   version 2.3 - Keyboard shortcut for opening the browser action
+  version 2.5 - Middle-click on toolbar button to take the alternate action
 */
 
 /**** Create and populate data structure ****/
@@ -52,6 +53,7 @@ var oPrefs = {
 	sectionHeight: "490px",		// Height of list panel sections
 	blnSkipDiscarded: true,		// Whether to skip discarded tabs in quick switch
 	blnSkipHidden: true,		// Whether to skip hidden tabs in quick switch/omit from lists
+	blnMiddleClick: true, 		// Whether to handle middle-click on the browser action button for alternate action
 	blnActivatePinned: false,	// Whether go-to-tab keyboard shortcut activates pinned tabs (false = only regular tabs) v2.1
 	blnActivateHidden: false,	// Whether go-to-tab keyboard shortcut activates hidden tabs v2.1
 	blnActivateDiscarded: true,	// Whether go-to-tab keyboard shortcut activates discarded tabs v2.1
@@ -599,8 +601,10 @@ browser.windows.onFocusChanged.addListener((wid) => {
 /**** Set up toolbar button listener and button/tooltip toggler ****/
 
 // Listen for button click and switch to previous tab
-browser.browserAction.onClicked.addListener((currTab) => {
-	if (oPrefs.blnButtonSwitches) {
+browser.browserAction.onClicked.addListener((currTab, clickData) => { 
+	// v2.5 uses clickData to check middle button
+	if ((oPrefs.blnButtonSwitches == true && clickData.button == 0) || 
+		(oPrefs.blnButtonSwitches == false && clickData.button == 1 && oPrefs.blnMiddleClick == true)) {
 		if (oPrefs.blnSameWindow) {
 			// Within window switch
 			doSwitch(currTab.windowId, currTab.windowId);
@@ -608,7 +612,7 @@ browser.browserAction.onClicked.addListener((currTab) => {
 			// Unrestricted switch
 			doSwitch('global', currTab.windowId);
 		}
-	} else {
+	} else if (clickData.button == 0 || (clickData.button == 1 && oPrefs.blnMiddleClick == true)) {
 		if (oPrefs.blnSameWindow) {
 			// Current window list
 			oPrefs.popuptab = 0;
@@ -827,6 +831,7 @@ function handleMessage(request, sender, sendResponse) {
 		}
 		oPrefs.blnSkipDiscarded = oSettings.blnSkipDiscarded;
 		oPrefs.blnSkipHidden = oSettings.blnSkipHidden;
+		oPrefs.blnMiddleClick = oSettings.blnMiddleClick;
 		oPrefs.blnActivatePinned = oSettings.blnActivatePinned;
 		oPrefs.blnActivateHidden = oSettings.blnActivateHidden;
 		oPrefs.blnActivateDiscarded = oSettings.blnActivateDiscarded;

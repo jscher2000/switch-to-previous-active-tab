@@ -1,10 +1,11 @@
 /* 
-  Copyright 2022. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2023. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 2.0 - Add tab skipping options and resize dialog for larger font sizes
   version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
   version 2.2 - Container indicator, hide extension page URL when opened in a window
   version 2.2.1 - Bug fix
-  version 2.4 - Windows and Global lists can be navigated using arrow keys and Enter
+  version 2.4 - Window and Global lists can be navigated using arrow keys and Enter
+  version 2.5 - Settings support for middle-click on the toolbar button taking alternate action
 */
 
 var oPrefs, oRATprefs;
@@ -83,6 +84,12 @@ function setFormControls(){
 	} else {
 		if (document.querySelector('input[name="prefSkipHidden"]').hasAttribute('checked'))
 			document.querySelector('input[name="prefSkipHidden"]').removeAttribute('checked');
+	}
+	if (oPrefs.blnMiddleClick){ //v2.5
+		document.querySelector('input[name="enableMiddleClick"]').setAttribute('checked', 'checked');
+	} else {
+		if (document.querySelector('input[name="enableMiddleClick"]').hasAttribute('checked'))
+			document.querySelector('input[name="enableMiddleClick"]').removeAttribute('checked');
 	}
 	if (oPrefs.blnActivatePinned){ //v2.1
 		document.querySelector('input[name="prefActivatePinned"]').setAttribute('checked', 'checked');
@@ -632,6 +639,8 @@ function updatePrefs(evt){
 	else oPrefs.blnSkipDiscarded = false;
 	if (document.querySelector('input[name="prefSkipHidden"]').checked) oPrefs.blnSkipHidden = true;
 	else oPrefs.blnSkipHidden = false;
+	if (document.querySelector('input[name="enableMiddleClick"]').checked) oPrefs.blnMiddleClick = true;
+	else oPrefs.blnMiddleClick = false;
 	if (document.querySelector('input[name="prefActivatePinned"]').checked) oPrefs.blnActivatePinned = true; //v2.1
 	else oPrefs.blnActivatePinned = false;
 	if (document.querySelector('input[name="prefActivateHidden"]').checked) oPrefs.blnActivateHidden = true; //v2.1
