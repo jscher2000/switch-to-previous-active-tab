@@ -1,5 +1,5 @@
 /* 
-  Copyright 2023. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2025. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 0.3 - revise and prepopulate data structure
   version 0.4 - add window/global switch, context menu items on toolbar button
   version 0.5 - add recent tabs list (requires tabs permission)
@@ -30,6 +30,7 @@
   version 2.2 - handle opening Options panel from Options page
   version 2.3 - Keyboard shortcut for opening the browser action
   version 2.5 - Middle-click on toolbar button to take the alternate action
+  version 2.6 - Tab group labels - now requires Fx139 or higher, option to remove background striping for unloaded tabs
 */
 
 /**** Create and populate data structure ****/
@@ -46,6 +47,7 @@ var oPrefs = {
 	blnKeepOpen: false,			// When switching in the same window, keep popup open (default switched in v2.0)
 	blnDark: undefined,			// Toggle colors to bright-on-dark (true=dark, false=light, undefined=auto)
 	blnColorbars: true,			// Use color bar background for list (true=blue, false=gray, undefined=mono)
+	blnStripe: true,			// Diagonal stripes on unloaded/hidden tabs
 	blnSansSerif: false,		// Whether to use the default sans-serif font
 	strFontSize: "14px",		// Default font size for popup
 	blnBoldTitle: false,		// Whether to bold the window title
@@ -820,6 +822,7 @@ function handleMessage(request, sender, sendResponse) {
 		oPrefs.blnKeepOpen = oSettings.blnKeepOpen;
 		oPrefs.blnDark = oSettings.blnDark;
 		oPrefs.blnColorbars = oSettings.blnColorbars;
+		oPrefs.blnStripe = oSettings.blnStripe;
 		oPrefs.blnSansSerif = oSettings.blnSansSerif;
 		oPrefs.strFontSize = oSettings.strFontSize;
 		oPrefs.blnBoldTitle = oSettings.blnBoldTitle;

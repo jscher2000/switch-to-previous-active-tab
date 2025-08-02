@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link rel="stylesheet" href="popup.css" type="text/css">
-<title>Recent Tabs Popup v2.5</title>
+<title>Recent Tabs Popup v2.6</title>
 </head>
 <body>
 <nav>
@@ -50,9 +50,11 @@
 							<option value="barsblue">blue/gray bars</option>
 							<option value="barsgray">gray/gray bars</option>
 							<option value="barsnone">no color bars</option>
-						</select></p>
-						<p><label><input type="checkbox" name="prefsans"> Use my sans-serif font</label></p>
-						<p>Font size: <select name="fontsize">
+						</select><br>
+						<label><input type="checkbox" name="prefStripe"> Stripe unloaded and hidden tabs</label>
+						</p>
+						<p><label><input type="checkbox" name="prefsans"> Use my sans-serif font</label><br>
+						Font size: <select name="fontsize">
 							<option value="9px">9px</option>
 							<option value="10px">10px</option>
 							<option value="11px">11px</option>
@@ -201,6 +203,6 @@
 </div>
 </body>
 <script type="text/javascript" src="popup.js"></script>
-<template id="newLI"><li id="" incog="" class="" tabindex="-1"><span><span><img style="width:16px;height:16px" src="iconsrc"></span><br><span></span></span><span class="right"><br><span tabcontext="">&nbsp;</span></span></li></template>
+<template id="newLI"><li id="" incog="" class="" tabindex="-1"><span><span><img style="width:16px;height:16px" src="iconsrc"></span><br><span></span></span><span class="right"><br><span tabgroup="">&nbsp;</span><span tabcontext="">&nbsp;</span></span></li></template>
 <template id="identity"><span class="context-label"></span><span class="context-icon"></span></template>
 </html>

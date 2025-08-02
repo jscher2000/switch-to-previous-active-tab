@@ -1,11 +1,12 @@
 /* 
-  Copyright 2023. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2025. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 2.0 - Add tab skipping options and resize dialog for larger font sizes
   version 2.1 - Add options for optional "Go To Tab" keyboard shortcuts
   version 2.2 - Container indicator, hide extension page URL when opened in a window
   version 2.2.1 - Bug fix
   version 2.4 - Window and Global lists can be navigated using arrow keys and Enter
   version 2.5 - Settings support for middle-click on the toolbar button taking alternate action
+  version 2.6 - Display tab group label, option to remove background striping for unloaded tabs
 */
 
 var oPrefs, oRATprefs;
@@ -153,6 +154,14 @@ function setFormControls(){
 			document.body.classList.remove('gray');
 			document.querySelector('option[value="barsnone"]').setAttribute('selected', 'selected');		
 	}
+	if (oPrefs.blnStripe){
+		document.body.classList.remove('nostripe');
+		document.querySelector('input[name="prefStripe"]').setAttribute('checked', 'checked');
+	} else {
+		document.body.classList.add('nostripe');
+		if (document.querySelector('input[name="prefStripe"]').hasAttribute('checked'))
+			document.querySelector('input[name="prefStripe"]').removeAttribute('checked');
+	}
 	if (oPrefs.blnSansSerif){
 		document.body.style.setProperty('font-family', 'sans-serif', 'important');
 		document.querySelector('input[name="prefsans"]').setAttribute('checked', 'checked');
@@ -252,7 +261,7 @@ function getGlobal(blnClear){
 			} else {
 				browser.tabs.get(arrWTabs[j]).then((currTab) => {
 					if (!(currTab.id in oRecent)){
-						oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null};
+						oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null, "tabgroup":null};
 					}
 					oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 					oRecent[currTab.id].title = currTab.title;
@@ -261,6 +270,7 @@ function getGlobal(blnClear){
 					oRecent[currTab.id].incog = currTab.incognito;
 					oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 					oRecent[currTab.id].tabcontext = currTab.cookieStoreId; // v2.2
+					oRecent[currTab.id].tabgroup = currTab.groupId; // v2.6 - requires Fx139+
 					if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
 						addListItem(currTab.id, dest);
 					}
@@ -270,6 +280,8 @@ function getGlobal(blnClear){
 		}
 		// v2.2 - Add Container Indicator (some delay required)
 		window.setTimeout(function(){addContainer('#tabglobal ul');}, 250);
+		// v2.6 - Add tab group label (version 139.0 and later) (some delay required)
+		window.setTimeout(function(){addGroupLabel('#tabglobal ul');}, 250);
 		// v2.4 - Focus first list item on Global if it's the displayed panel
 		var visTab = document.querySelector('nav ul li.vis');
 		if (visTab && visTab.getAttribute('panel') == 'tabglobal'){
@@ -308,7 +320,7 @@ function getWindow(blnClear){
 								document.getElementById('twin').setAttribute('disabled', 'disabled');
 							}
 							if (!(currTab.id in oRecent)){
-								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null};
+								oRecent[currTab.id] = {"url":null, "title":null, "time":null, "icon":null, "incog":null, "imgPath":null, "tabcontext":null, "tabgroup":null};
 							}
 							oRecent[currTab.id].url = currTab.url.replace(/https:\/\//, '').replace(/http:\/\//, '');
 							oRecent[currTab.id].title = currTab.title;
@@ -317,6 +329,7 @@ function getWindow(blnClear){
 							oRecent[currTab.id].incog = currTab.incognito;
 							oRecent[currTab.id].imgPath = oRecent[currTab.id].icon;
 							oRecent[currTab.id].tabcontext = currTab.cookieStoreId; // v2.2
+							oRecent[currTab.id].tabgroup = currTab.groupId; // v2.6 - requires Fx139+
 							if (oPrefs.blnIncludePrivate || oRecent[currTab.id].incog === false){
 								addListItem(currTab.id, dest);
 							}
@@ -326,6 +339,8 @@ function getWindow(blnClear){
 				}
 				// v2.2 - Add Container Indicator (some delay required)
 				window.setTimeout(function(){addContainer('#tabthiswin ul');}, 250);
+				// v2.6 - Add tab group label (some delay just in case)
+				window.setTimeout(function(){addGroupLabel('#tabthiswin ul');}, 250);
 				// v2.4 - Focus first list item on Window if it's the displayed panel
 				var visTab = document.querySelector('nav ul li.vis');
 				if (visTab && visTab.getAttribute('panel') == 'tabthiswin'){
@@ -415,6 +430,10 @@ function addListItem(onetab, list){
 	elTemp = clone.querySelector('span[tabcontext]');
 	if (oRecent[onetab].tabcontext == 'firefox-default') elTemp.remove();
 	else elTemp.setAttribute('tabcontext', oRecent[onetab].tabcontext);
+	// v2.6 Store the group id for the Tab Group Label
+	elTemp = clone.querySelector('span[tabgroup]');
+	if (oRecent[onetab].tabgroup == '-1') elTemp.remove();
+	else elTemp.setAttribute('tabgroup', oRecent[onetab].tabgroup);
 	// Add the item to the list
 	list.appendChild(clone);
 }
@@ -438,6 +457,22 @@ function addContainer(listSelector){
 				clone.querySelector('.context-label').textContent = ident.name;
 				clone.querySelector('.context-icon').setAttribute('title', ident.name);
 				spans[k].appendChild(clone);
+			}
+		}
+	}).catch((err) => {console.log(err)});
+}
+
+function addGroupLabel(listSelector){ //v2.6
+	var spans = document.querySelectorAll(listSelector + ' span[tabgroup]');
+	browser.tabGroups.query({}).then((groups) => {
+		if (!groups.length) return;
+		for (var k=0; k<spans.length; k++){
+			var tg = groups.find(objGroup => objGroup.id == spans[k].getAttribute('tabgroup'));
+			if (tg){
+				// set group label color var
+				spans[k].setAttribute('style', '--group-color: var(--tab-group-color-' + tg.color + '); --text-color: var(--tab-group-' + tg.color + '-text);');
+				// set label text
+				spans[k].textContent = tg.title || ' ';
 			}
 		}
 	}).catch((err) => {console.log(err)});
@@ -596,6 +631,7 @@ document.querySelector('#btnSave').addEventListener('click', updatePrefs, false)
 document.querySelector('#btnReset').addEventListener('click', clearForm, false);
 document.querySelector('select[name="prefdark"]').addEventListener('change', updateDarkmode, false);
 document.querySelector('select[name="colorbars"]').addEventListener('change', updateColorbars, false);
+document.querySelector('input[name="prefStripe"]').addEventListener('click', updateStriping, false);
 document.querySelector('input[name="prefsans"]').addEventListener('click', updatefont, false);
 document.querySelector('select[name="fontsize"]').addEventListener('change', updatefont, false);
 document.querySelector('input[name="prefboldtitle"]').addEventListener('click', updateweightvar, false);
@@ -669,6 +705,8 @@ function updatePrefs(evt){
 		default: // flat
 			oPrefs.blnColorbars = undefined;
 	}
+	if (document.querySelector('input[name="prefStripe"]').checked) oPrefs.blnStripe = true;
+	else oPrefs.blnStripe = false;
 	if (document.querySelector('input[name="prefsans"]').checked) oPrefs.blnSansSerif = true;
 	else oPrefs.blnSansSerif = false;
 	oPrefs.strFontSize = document.querySelector('select[name="fontsize"]').value;
@@ -741,6 +779,16 @@ function updateweightvar(evt){
 			document.body.style.setProperty('--url-weight', 'bold', 'important');
 		} else {
 			document.body.style.removeProperty('--url-weight');
+		}
+	}
+}
+function updateStriping(evt){
+	if (evt && evt.target) var tgt = evt.target;
+	if (tgt.getAttribute('name') == 'prefStripe'){
+		if (tgt.checked){
+			document.body.classList.remove('nostripe');
+		} else {
+			document.body.classList.add('nostripe');
 		}
 	}
 }

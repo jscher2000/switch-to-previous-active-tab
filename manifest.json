@@ -2,11 +2,11 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "2.5",
+	"version": "2.6",
 	"browser_specific_settings":{
 		"gecko": {
 			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
-			"strict_min_version": "57.0"
+			"strict_min_version": "139.0"
 		}
 	},
 	"developer": {
@@ -27,7 +27,8 @@
 		"menus",
 		"tabs",
 		"storage",
-		"contextualIdentities"
+		"contextualIdentities",
+		"tabGroups"
 	],
 	"icons": {
 		"16": "icons/lasttab-16.png",

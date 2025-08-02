@@ -1,4 +1,4 @@
-/* v2.4 */
+/* v2.6 */
 body {
 	margin: 0;
 	padding: 4px 4px 10px 0;
@@ -228,10 +228,10 @@ body.dark img[src*="privateBrowsing.svg"] {
 body.dark section ul li[incog="true"]  > span.right > span {
 	background-image: url("icons/privateBrowsingDark.svg");
 }
-.skip {
+body:not(.nostripe) .skip {
 	background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, #ddd 0px, #ddd 20px);
 }
-body.dark .skip {
+body.dark:not(.nostripe) .skip {
 	background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 20px);
 }
 /* v2.1 */
@@ -285,4 +285,58 @@ body.dark .context-label:hover {
 #panels.compact section ul li:not([incog="true"])  > span.right > .context-icon {
 	display: inline; 
 	margin-left: 0;
+}
+
+/* v2.6 Tab Group Label */
+/* Using expanded tab group text and background colors from Firefox 141
+   https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch 
+*/
+span.right > span[tabgroup] {
+	color: var(--text-color);
+	background-color: var(--group-color);
+	border-radius: 4px;
+	font-size: 0.75em;
+	padding: 0 4px;
+	min-width: 16px;
+	min-height: 16px;
+}
+body {
+	--tab-group-color-blue: oklch(48% 0.2 260);
+	--tab-group-color-purple: oklch(48% 0.2 315);
+	--tab-group-color-cyan: oklch(48% 0.2 205);
+	--tab-group-color-orange: oklch(48% 0.2 50);
+	--tab-group-color-yellow: oklch(51% 0.23 90);
+	--tab-group-color-pink: oklch(48% 0.2 360);
+	--tab-group-color-green: oklch(48% 0.2 145);
+	--tab-group-color-red: oklch(48% 0.2 15);
+	--tab-group-color-gray: #5e6a77;
+	--tab-group-blue-text: oklch(97% 0.05 260);
+	--tab-group-purple-text: oklch(97% 0.05 315);
+	--tab-group-cyan-text: oklch(97% 0.05 205);
+	--tab-group-orange-text: oklch(97% 0.05 50);
+	--tab-group-yellow-text: oklch(97% 0.05 90);
+	--tab-group-pink-text: oklch(97% 0.05 360);
+	--tab-group-green-text: oklch(97% 0.05 145);
+	--tab-group-red-text: oklch(97% 0.05 15);
+	--tab-group-gray-text: #f2f9ff;
+}
+body.dark { 
+	--tab-group-color-blue: oklch(83% 0.17 260);
+	--tab-group-color-purple: oklch(83% 0.14 315);
+	--tab-group-color-cyan: oklch(83% 0.11 205);
+	--tab-group-color-orange: oklch(86% 0.14 50);
+	--tab-group-color-yellow: oklch(83% 0.14 90);
+	--tab-group-color-pink: oklch(83% 0.14 360);
+	--tab-group-color-green: oklch(83% 0.14 145);
+	--tab-group-color-red: oklch(83% 0.14 15);
+	--tab-group-color-gray: #99a6b4;
+	--tab-group-blue-text: #15141a;
+	--tab-group-purple-text: #15141a;
+	--tab-group-cyan-text: #15141a;
+	--tab-group-orange-text: #15141a;
+	--tab-group-yellow-text: #15141a;
+	--tab-group-pink-text: #15141a;
+	--tab-group-green-text: #15141a;
+	--tab-group-red-text: #15141a;
+	--tab-group-gray-text: #5e6a77;
 }
