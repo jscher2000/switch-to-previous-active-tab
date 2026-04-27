@@ -1,5 +1,5 @@
 /* 
-  Copyright 2025. Jefferson "jscher2000" Scher. License: MPL-2.0.
+  Copyright 2026. Jefferson "jscher2000" Scher. License: MPL-2.0.
   version 0.3 - revise and prepopulate data structure
   version 0.4 - add window/global switch, context menu items on toolbar button
   version 0.5 - add recent tabs list (requires tabs permission)
@@ -31,6 +31,7 @@
   version 2.3 - Keyboard shortcut for opening the browser action
   version 2.5 - Middle-click on toolbar button to take the alternate action
   version 2.6 - Tab group labels - now requires Fx139 or higher, option to remove background striping for unloaded tabs
+  version 2.6.1 - Apply "Button/key/list omits hidden tabs" to Firefox View; optional keyboard shortcut for Switch to previous active tab in any window
 */
 
 /**** Create and populate data structure ****/
@@ -120,6 +121,8 @@ function initObjects(){
 		// Store tabIds to oTabs
 		var i, gCount = 0, arrWTabs;
 		for (i=0; i<arrAllTabs.length; i++){
+			// Skip hidden tabs - Firefox View (v2.6.1)
+			if (oPrefs.blnSkipHidden && arrAllTabs[i].hidden) continue;
 			// Add to global list for i=0 through maxGlobal-1 (order among windows is unpredictable)
 			if (gCount < oPrefs.maxGlobal) {
 				if (!('global' in oTabs)) {
@@ -202,6 +205,8 @@ var blnIsPrivate = false;
 // Listen for tab activation and update oTabs
 browser.tabs.onActivated.addListener((info) => {
 	browser.tabs.get(info.tabId).then((currTab) => {
+		// Skip newly created hidden tab, which might be just Firefox View? (v2.6.1)
+		if (oPrefs.blnSkipHidden && currTab.hidden) return;
 		// Update private window status
 		if (currTab.incognito) blnIsPrivate = true;
 		else blnIsPrivate = false;
@@ -608,11 +613,11 @@ browser.browserAction.onClicked.addListener((currTab, clickData) => {
 	if ((oPrefs.blnButtonSwitches == true && clickData.button == 0) || 
 		(oPrefs.blnButtonSwitches == false && clickData.button == 1 && oPrefs.blnMiddleClick == true)) {
 		if (oPrefs.blnSameWindow) {
-			// Within window switch
-			doSwitch(currTab.windowId, currTab.windowId);
+			// Within window switch; pass hidden status to doSwitch (v2.6.1)
+			doSwitch(currTab.windowId, currTab.windowId, currTab.hidden);
 		} else {
-			// Unrestricted switch
-			doSwitch('global', currTab.windowId);
+			// Unrestricted switch; pass hidden status to doSwitch (v2.6.1)
+			doSwitch('global', currTab.windowId, currTab.hidden);
 		}
 	} else if (clickData.button == 0 || (clickData.button == 1 && oPrefs.blnMiddleClick == true)) {
 		if (oPrefs.blnSameWindow) {
@@ -631,19 +636,27 @@ browser.browserAction.onClicked.addListener((currTab, clickData) => {
 	}
 });
 
-function doSwitch(oKey, wid){
+function doSwitch(oKey, wid, blnHidden){
 	var arrWTabs = oTabs[oKey];
-	if (arrWTabs && arrWTabs.length > 1) {
-		newTabIndex = 1;
-		if (oTabs['skip'] && oTabs['skip'].length > 0){
-			while (newTabIndex < arrWTabs.length + 1){
-				if (!oTabs['skip'].includes(arrWTabs[newTabIndex])) break;
-				newTabIndex++
-			}
-		}
+	if (oPrefs.blnSkipHidden && blnHidden == true){ // Probably Firefox View (v2.6.1)
+		// go to TOP of the list
+		newTabIndex = 0;
 		browser.tabs.update(arrWTabs[newTabIndex], {active:true}).then((currTab) => {
 			if (currTab.windowId != wid) browser.windows.update(currTab.windowId, {focused: true});
 		});
+	} else { // Previous logic
+		if (arrWTabs && arrWTabs.length > 1) {
+			newTabIndex = 1;
+			if (oTabs['skip'] && oTabs['skip'].length > 0){
+				while (newTabIndex < arrWTabs.length + 1){
+					if (!oTabs['skip'].includes(arrWTabs[newTabIndex])) break;
+					newTabIndex++
+				}
+			}
+			browser.tabs.update(arrWTabs[newTabIndex], {active:true}).then((currTab) => {
+				if (currTab.windowId != wid) browser.windows.update(currTab.windowId, {focused: true});
+			});
+		}
 	}
 }
 
@@ -734,12 +747,12 @@ function RATmenusetup(){
 browser.menus.onClicked.addListener((menuInfo, currTab) => {
 	switch (menuInfo.menuItemId) {
 		case 'bamenu_switchwindow':
-			// Within window switch
-			doSwitch(currTab.windowId, currTab.windowId);
+			// Within window switch; pass hidden status to doSwitch (v2.6.1)
+			doSwitch(currTab.windowId, currTab.windowId, currTab.hidden);
 			break;
 		case 'bamenu_switchglobal':
-			// Unrestricted switch
-			doSwitch('global', currTab.windowId);
+			// Unrestricted switch; pass hidden status to doSwitch (v2.6.1)
+			doSwitch('global', currTab.windowId, currTab.hidden);
 			break;
 		case 'bamenu_popup':
 			oPrefs.popuptab = 1;
@@ -1036,12 +1049,14 @@ function attnHandler(tabId, changeInfo, oTab){
 }
 
 /**** Keyboard shortcut handler ****/
-browser.commands.onCommand.addListener(strName => {
+browser.commands.onCommand.addListener((strName, currTab) => {
 	if (strName === 'previous-tab'){
-		// Within window switch (first need to get the current window)
-		browser.windows.getCurrent().then((currWin) => {
-			doSwitch(currWin.id, currWin.id);
-		})
+		// Within window switch
+		doSwitch(currTab.windowId, currTab.windowId, currTab.hidden); // pass hidden status to doSwitch (v2.6.1)
+	}
+	if (strName === 'previous-tab-global'){
+		// Switch to last tab in any window (no keyboard shortcut assigned by default)
+		doSwitch('global', currTab.windowId, currTab.hidden); // pass hidden status to doSwitch (v2.6.1)
 	}
 	if (strName === 'show-list'){
 		if (oPrefs.blnSameWindow) {

@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Switch To Previous Active Tab",
 	"description": "Flips to the last accessed tab in the same window, or in any window.",
-	"version": "2.6",
+	"version": "2.6.1",
 	"browser_specific_settings":{
 		"gecko": {
 			"id": "{f01b6ea5-5910-4359-afee-9f0de052c7a1}",
@@ -41,7 +41,10 @@
 				"default": "Alt+Shift+Left",
 				"mac": "MacCtrl+Shift+Left"
 			},
-			"description": "Switch to previous active tab"
+			"description": "Switch to previous active tab (same window)"
+		},
+		"previous-tab-global": {
+			"description": "Switch to previous active tab in any window"
 		},
 		"show-list": {
 			"suggested_key": {
